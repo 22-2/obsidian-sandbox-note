@@ -25,7 +25,7 @@ export async function extractToFileInteraction<T extends AbstractNoteView>(
 		const defaultLocation = settings[
 			"fileOperation.useObsidianDefaultLocation"
 		]
-			? (view.app.vault.getConfig("newFileLocation") as string)
+			? (view.app.vault.getConfig("newFileFolderPath") as string)
 			: settings["fileOperation.defaultSavePath"];
 
 		const suggestedPath = buildSuggestedPath(
