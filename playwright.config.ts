@@ -11,6 +11,7 @@ export default defineConfig({
 	outputDir: path.join(e2eDir, "./test-results"),
 	reporter: [
 		["html", { outputFolder: path.join(e2eDir, "./playwright-report") }],
+		["list", { printSteps: false }],
 	],
 	fullyParallel: true,
 	workers: 4,

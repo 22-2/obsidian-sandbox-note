@@ -49,12 +49,14 @@ test.describe("Data Persistence Scenarios", () => {
 				async (plugin) => {
 					const dbManager = plugin.orchestrator.get("dbManager");
 					const allSandboxes = await dbManager.getAllSandboxes();
-					return allSandboxes[0];
+					const data = allSandboxes[0];
+					// Return only necessary fields to avoid console spam
+					return data ? { content: data.content, id: data.id } : null;
 				}
 			);
 
 			expect(savedData).toBeDefined();
-			expect(savedData.content).toBe(testContent);
+			expect(savedData?.content).toBe(testContent);
 
 			// Reload Obsidian
 			await vault.window.reload();
@@ -310,7 +312,9 @@ test.describe("Data Persistence Scenarios", () => {
 				async (plugin, [content]) => {
 					const dbManager = plugin.orchestrator.get("dbManager");
 					const allSandboxes = await dbManager.getAllSandboxes();
-					return allSandboxes.find((s: HotSandboxNoteData) => s.content === content);
+					const found = allSandboxes.find((s: HotSandboxNoteData) => s.content === content);
+					// Return only necessary fields to avoid console spam
+					return found ? { content: found.content, id: found.id } : null;
 				},
 				[validContent]
 			);
