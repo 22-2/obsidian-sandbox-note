@@ -45,7 +45,7 @@ export default class SandboxNotePlugin extends Plugin {
 
 	/** Initialize the core components of the plugin. */
 	private initializeCoreComponents() {
-		this.emitter = new EventEmitter<AppEvents>();
+		this.emitter = new EventEmitter<AppEvents>(this.register.bind(this));
 		this.orchestrator = new AppOrchestrator(this, this.emitter);
 	}
 

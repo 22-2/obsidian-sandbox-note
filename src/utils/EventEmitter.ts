@@ -1,6 +1,7 @@
 // src/utils/EventEmitter.ts
 
 import log from "loglevel";
+import { Plugin } from "obsidian";
 
 type Listener<T> = (payload: T) => void;
 
@@ -11,6 +12,8 @@ export class EventEmitter<Events extends object> {
 		[K in keyof Events]?: Array<Listener<Events[K]>>;
 	} = {};
 
+	constructor(private register: Plugin["register"]) {}
+
 	on<K extends keyof Events>(
 		event: K,
 		listener: Listener<Events[K]>
@@ -20,6 +23,7 @@ export class EventEmitter<Events extends object> {
 		}
 		this.listeners[event]?.push(listener);
 
+		this.register(() => this.off(event, listener));
 		return () => this.off(event, listener);
 	}
 
@@ -37,6 +41,7 @@ export class EventEmitter<Events extends object> {
 			listener(payload);
 			this.off(event, onceListener);
 		};
+		this.register(() => this.off(event, onceListener));
 		this.on(event, onceListener);
 	}
 
