@@ -36,7 +36,8 @@ export abstract class AbstractNoteView extends ItemView {
 	public masterId: string;
 	public scope: Scope;
 	public wrapper: MagicalEditorWrapper;
-	public navigation = true;
+
+	// public navigation = true;
 
 	private stateManager: ViewStateManager;
 	private saveManager: SaveManager;
