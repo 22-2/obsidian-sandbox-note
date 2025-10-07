@@ -85,14 +85,21 @@ export class DatabaseManager implements IManager {
 		for (let attempt = 1; attempt <= MAX_RETRY_ATTEMPTS; attempt++) {
 			try {
 				await this.context.dbAPI.saveSandbox(updatedNote);
-				logger.debug(`Saved hot note to database: ${masterId} (attempt ${attempt})`);
+				logger.debug(
+					`Saved hot note to database: ${masterId} (attempt ${attempt})`
+				);
 				return;
 			} catch (error) {
 				if (attempt === MAX_RETRY_ATTEMPTS) {
-					logger.warn(`Failed to save note to database after ${MAX_RETRY_ATTEMPTS} attempts: ${masterId}`, error);
+					logger.warn(
+						`Failed to save note to database after ${MAX_RETRY_ATTEMPTS} attempts: ${masterId}`,
+						error
+					);
 					throw error;
 				}
-				logger.debug(`Save attempt ${attempt} failed for ${masterId}, retrying...`);
+				logger.debug(
+					`Save attempt ${attempt} failed for ${masterId}, retrying...`
+				);
 			}
 		}
 	}
@@ -120,8 +127,13 @@ export class DatabaseManager implements IManager {
 	private createDebouncedSave(masterId: string, debounceMs: number): void {
 		if (!this.debouncedSaveFns.has(masterId)) {
 			const debouncer = debounce(
-				(id: string, content: string) => {
-					this.saveToDatabase(id, content);
+				(id: string) => {
+					const view = this.context
+						.getAllHotSandboxViews()
+						.find((v) => v.masterId === id);
+					if (view) {
+						this.context.emitter.emit("save-requested", { view });
+					}
 				},
 				debounceMs,
 				true
@@ -134,25 +146,40 @@ export class DatabaseManager implements IManager {
 		const RETENTION_DAYS = 3;
 		const savedSandboxes = await this.context.dbAPI.getAllSandboxes();
 		const allViews = this.context.getAllHotSandboxViews();
-		
+
 		let deletedCount = 0;
 		let skippedCount = 0;
-		
+
 		for (const sandbox of savedSandboxes) {
 			const view = allViews.find((view) => view.masterId === sandbox.id);
-			
+
 			// Only delete if there's no active view AND the sandbox is older than 3 days
-			if (!view?.masterId && this.context.dbAPI.isOlderThanDays(sandbox, RETENTION_DAYS)) {
+			if (
+				!view?.masterId &&
+				this.context.dbAPI.isOlderThanDays(sandbox, RETENTION_DAYS)
+			) {
 				await this.deleteFromAll(sandbox.id);
 				deletedCount++;
-				logger.debug(`Deleted old dead sandbox: ${sandbox.id} (age: ${Math.floor((Date.now() - sandbox.mtime) / (24 * 60 * 60 * 1000))} days)`);
+				logger.debug(
+					`Deleted old dead sandbox: ${sandbox.id} (age: ${Math.floor(
+						(Date.now() - sandbox.mtime) / (24 * 60 * 60 * 1000)
+					)} days)`
+				);
 			} else if (!view?.masterId) {
 				skippedCount++;
-				logger.debug(`Skipped dead sandbox (within retention period): ${sandbox.id} (age: ${Math.floor((Date.now() - sandbox.mtime) / (24 * 60 * 60 * 1000))} days)`);
+				logger.debug(
+					`Skipped dead sandbox (within retention period): ${
+						sandbox.id
+					} (age: ${Math.floor(
+						(Date.now() - sandbox.mtime) / (24 * 60 * 60 * 1000)
+					)} days)`
+				);
 			}
 		}
-		
-		logger.debug(`Cleanup complete: deleted ${deletedCount} old sandboxes, skipped ${skippedCount} recent dead sandboxes`);
+
+		logger.debug(
+			`Cleanup complete: deleted ${deletedCount} old sandboxes, skipped ${skippedCount} recent dead sandboxes`
+		);
 	}
 
 	getSandboxByMasterId(masterId: string) {

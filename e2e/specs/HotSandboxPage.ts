@@ -89,6 +89,22 @@ export class HotSandboxPage extends CustomViewPageObject {
 		await this.closeActiveTab();
 	}
 
+	async waitForSaved() {
+		const pluginHandle = await this.getPlugin<SandboxNotePlugin>(PLUGIN_ID);
+		return pluginHandle.evaluate(
+			(plugin) =>
+				new Promise((resolve, reject) => {
+					plugin.emitter.on("save-result", (data) => {
+						if (data.success) {
+							resolve(true);
+						} else {
+							reject(false);
+						}
+					});
+				})
+		);
+	}
+
 	// ===== Hot Sandbox固有のアサーション =====
 
 	async expectSandboxViewCount(count: number): Promise<void> {

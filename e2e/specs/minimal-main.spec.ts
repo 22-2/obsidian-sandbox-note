@@ -293,9 +293,10 @@ test.describe("HotSandboxNoteView Main Features", () => {
 			await hotSandbox.createNewSandboxNote(persistentContent);
 			await hotSandbox.expectActiveSandboxTitle("*Hot Sandbox-1");
 			expect(hotSandbox.activeEditor).toHaveText(persistentContent);
+			await hotSandbox.waitForSaved();
 
 			// Reload Obsidian
-			await vault.window.reload();
+			await vault.window.evaluate(() => window.location.reload());
 			await hotSandbox.waitForLayoutReady();
 
 			// Verify content persists
