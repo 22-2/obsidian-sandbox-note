@@ -9,7 +9,7 @@ import type { VaultOptions } from "../helpers/managers/VaultManager";
 import { HotSandboxPage } from "./HotSandboxPage";
 
 const vaultOptions: VaultOptions = {
-	useSandbox: false,
+	useSandbox: true,
 	plugins: [{ pluginId: PLUGIN_ID, path: DIST_DIR }],
 };
 
@@ -19,7 +19,7 @@ test.use({
 });
 
 // --- Test Suite ---
-// test.describe.configure({ mode: "serial" });
+test.describe.configure({ mode: "serial" });
 test.describe("HotSandboxNoteView Main Features", () => {
 	test.describe("1. Note Creation and Input", () => {
 		test("should successfully create a new note and accept input", async ({
