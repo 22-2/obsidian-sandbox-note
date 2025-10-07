@@ -203,6 +203,7 @@ export class AppOrchestrator implements IManager {
 				getSandboxContent: (noteId) => cache.getSandboxContent(noteId),
 				getActiveView: () => views.getActiveView(),
 				workspace: this.plugin.app.workspace as never,
+				getSettings: this.getSettings.bind(this),
 			});
 		});
 	}
