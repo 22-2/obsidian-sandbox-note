@@ -12,7 +12,7 @@ import {
 	AbstractNoteView,
 	type AbstractNoteViewContext,
 } from "./internal/AbstractNoteView";
-import { extractToFileInteraction } from "./internal/utils";
+import { extractToFileInteraction, splitMd } from "./internal/utils";
 
 const logger = log.getLogger("HotSandboxNoteView");
 
@@ -77,7 +77,7 @@ export class HotSandboxNoteView extends AbstractNoteView {
 		const content = this.getContent();
 
 		// Get the first line of content and trim whitespace.
-		const firstLine = content.split("\n")[0].trim();
+		const firstLine = splitMd(content).content.split("\n")[0].trim();
 
 		// Return the first line as the title if it contains content.
 		if (firstLine.length > 0) {

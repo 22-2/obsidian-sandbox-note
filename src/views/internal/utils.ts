@@ -122,3 +122,34 @@ export function getSandboxVaultPath() {
 		return undefined;
 	}
 }
+
+export interface ParsedMarkdown {
+	frontmatter: string;
+	content: string;
+}
+/**
+ * A function to separate the frontmatter and content of a Markdown file.
+ * @param markdown - The Markdown string to be parsed.
+ * @returns An object containing the separated frontmatter and content.
+ */
+
+export function splitMd(markdown: string | null | undefined): ParsedMarkdown {
+	// Regular expression to isolate the frontmatter block
+	const frontmatterRegex = /^---\n([\s\S]*?)\n---/;
+
+	// Treat null or undefined input as an empty string
+	const safeMarkdown = markdown ?? "";
+
+	const match = safeMarkdown.match(frontmatterRegex);
+
+	let frontmatter = "";
+	let content = safeMarkdown;
+
+	if (match && match[1]) {
+		// If a frontmatter block is found
+		frontmatter = match[1].trim(); // Extract the content within the delimiters
+		content = safeMarkdown.slice(match[0].length); // Extract the rest of the string as content
+	}
+
+	return { frontmatter, content };
+}
