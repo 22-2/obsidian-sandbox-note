@@ -19,6 +19,7 @@ test.use({
 });
 
 // --- Test Suite ---
+test.describe.configure({ mode: "serial" });
 test.describe("HotSandboxNoteView Main Features", () => {
 	test.describe("1. Note Creation and Input", () => {
 		test("should successfully create a new note and accept input", async ({
