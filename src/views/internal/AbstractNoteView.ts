@@ -175,6 +175,17 @@ export abstract class AbstractNoteView extends ItemView {
 			this.masterId = newMasterId;
 		}
 
+		const editMode = this.wrapper.magicalEditor?.editMode;
+
+		// Update source mode if needed
+		if (
+			typeof stateWithoutContent.source === "boolean" &&
+			editMode.sourceMode !== stateWithoutContent.source
+		) {
+			editMode.toggleSource();
+			stateWithoutContent.layout = true;
+		}
+
 		// 3. Call the parent's setState method using the clean state.
 		// This ensures editor modes (source/preview, etc.) are set correctly,
 		// but prevents older content from being written.
