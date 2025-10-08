@@ -18,10 +18,8 @@ export class EventEmitter<Events extends object> {
 		event: K,
 		listener: Listener<Events[K]>,
 	): () => void {
-		if (!this.listeners[event]) {
-			this.listeners[event] = [];
-		}
-		this.listeners[event]?.push(listener);
+		this.listeners[event] ??= [];
+		this.listeners[event].push(listener);
 
 		this.register(() => this.off(event, listener));
 		return () => this.off(event, listener);
