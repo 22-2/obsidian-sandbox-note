@@ -48,7 +48,7 @@
 	"dependencies": {
 		"@codemirror/state": "^6.5.2",
 		"@codemirror/view": "^6.38.2",
-		"dexie": "^4.2.0",
+		"idb-keyval": "^6.2.2",
 		"loglevel": "^1.9.2",
 		"monkey-around": "^3.0.0",
 		"nanoid": "^5.1.6"

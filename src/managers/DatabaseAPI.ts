@@ -1,25 +1,22 @@
-import Dexie, { type Table } from "dexie";
+import { clear, createStore, del, get, keys, set } from "idb-keyval";
 import log from "loglevel";
 import type { HotSandboxNoteData } from "src/types";
 
 const logger = log.getLogger("DatabaseAPI");
 
-export class DatabaseAPI extends Dexie {
-	// 'notes' is typed with schema of our note object.
-	sandboxes!: Table<HotSandboxNoteData>;
+const SANDBOX_STORE_NAME = "sandboxes";
+const DB_NAME = "SandboxNoteDatabase";
 
-	constructor() {
-		super("SandboxNoteDatabase");
-		this.version(1).stores({
-			sandboxes: "&id, content, mtime", // Primary key and indexed props
-		});
-	}
+export class DatabaseAPI {
+	private store = createStore(DB_NAME, SANDBOX_STORE_NAME);
 
 	async getSandbox(id: string): Promise<HotSandboxNoteData | undefined> {
-		const data = await this.sandboxes.get(id);
+		const data = await get<HotSandboxNoteData>(id, this.store);
 
 		if (data && !this.validateSandboxData(data)) {
-			logger.debug(`Invalid sandbox data detected for id: ${id}, skipping...`);
+			logger.debug(
+				`Invalid sandbox data detected for id: ${id}, skipping...`
+			);
 			return undefined;
 		}
 
@@ -27,23 +24,35 @@ export class DatabaseAPI extends Dexie {
 	}
 
 	async saveSandbox(note: HotSandboxNoteData): Promise<string> {
-		await this.sandboxes.put(note);
+		await set(note.id, note, this.store);
 		return note.id;
 	}
 
 	async deleteSandbox(id: string): Promise<void> {
-		await this.sandboxes.delete(id);
+		await del(id, this.store);
 	}
 
 	async getAllSandboxes(): Promise<HotSandboxNoteData[]> {
-		return this.sandboxes.toArray();
+		const allKeys = await keys(this.store);
+		const sandboxes: HotSandboxNoteData[] = [];
+
+		for (const key of allKeys) {
+			const sandbox = await get<HotSandboxNoteData>(key, this.store);
+			if (sandbox) {
+				sandboxes.push(sandbox);
+			}
+		}
+
+		return sandboxes;
 	}
 
 	async clearAllSandboxes(): Promise<void> {
-		await this.sandboxes.clear();
+		await clear(this.store);
 	}
-	countSandboxes(): Promise<number> {
-		return this.sandboxes.count();
+
+	async countSandboxes(): Promise<number> {
+		const allKeys = await keys(this.store);
+		return allKeys.length;
 	}
 
 	/**
@@ -71,5 +80,13 @@ export class DatabaseAPI extends Dexie {
 		const ageInMs = Date.now() - note.mtime;
 		const daysInMs = days * 24 * 60 * 60 * 1000;
 		return ageInMs > daysInMs;
+	}
+
+	/**
+	 * Close method for compatibility with previous Dexie implementation
+	 * idb-keyval doesn't require explicit closing
+	 */
+	close(): void {
+		// No-op: idb-keyval doesn't require explicit closing
 	}
 }
