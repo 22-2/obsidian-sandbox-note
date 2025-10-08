@@ -16,7 +16,15 @@ export async function extractToFileInteraction<T extends AbstractNoteView>(
 	try {
 		// Get content and base title.
 		const content = view.getContent();
-		const baseTitle = t("defaults.untitled");
+		let baseTitle = t("defaults.untitled");
+
+		// Use first line as title if the setting is enabled
+		if (settings["appearance.firstLineAsTitle"]) {
+			const firstLine = splitMd(content).content.split("\n")[0].trim();
+			if (firstLine.length > 0) {
+				baseTitle = firstLine;
+			}
+		}
 
 		// Sanitize filenames
 		const sanitizedBasename = sanitizeFilename(baseTitle);
