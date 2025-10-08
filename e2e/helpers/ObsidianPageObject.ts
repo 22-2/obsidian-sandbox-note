@@ -248,7 +248,9 @@ export class ObsidianPageObject {
 	// ===== 待機・同期 =====
 
 	async waitForLayoutReady(): Promise<void> {
-		await this.page.waitForFunction(() => app.workspace.layoutReady);
+		await this.page.waitForFunction(
+			() => typeof app !== undefined && app.workspace.layoutReady
+		);
 	}
 
 	async waitForFileCreated(path: string, timeout = 5000): Promise<void> {
