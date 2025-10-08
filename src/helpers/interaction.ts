@@ -15,7 +15,7 @@ import { t } from "../i18n";
 export function showConfirmModal(
 	app: App,
 	title: string,
-	message: string
+	message: string,
 ): Promise<boolean> {
 	return new Promise((resolve) => {
 		new ConfirmModal(app, title, message, resolve).open();
@@ -30,7 +30,7 @@ export class ConfirmModal extends Modal {
 		app: App,
 		private title: string,
 		private message: string,
-		private callback: (result: boolean) => void
+		private callback: (result: boolean) => void,
 	) {
 		super(app);
 	}
@@ -48,13 +48,15 @@ export class ConfirmModal extends Modal {
 					.onClick(() => {
 						this.callback(true);
 						this.close();
-					})
+					}),
 			)
 			.addButton((btn) =>
-				btn.setButtonText(t("modals.confirmSaveLocation.buttons.no")).onClick(() => {
-					this.callback(false);
-					this.close();
-				})
+				btn
+					.setButtonText(t("modals.confirmSaveLocation.buttons.no"))
+					.onClick(() => {
+						this.callback(false);
+						this.close();
+					}),
 			);
 	}
 
@@ -67,9 +69,12 @@ export class ConfirmModal extends Modal {
  * Base class for path suggestion utilities
  */
 abstract class PathSuggest<
-	T extends TAbstractFile
+	T extends TAbstractFile,
 > extends AbstractInputSuggest<T> {
-	constructor(app: App, protected inputEl: HTMLInputElement) {
+	constructor(
+		app: App,
+		protected inputEl: HTMLInputElement,
+	) {
 		super(app, inputEl);
 	}
 
@@ -99,7 +104,7 @@ export class FolderSuggest extends PathSuggest<TFolder> {
 	getSuggestions(query: string): TFolder[] {
 		// @ts-expect-error - Creating root folder instance
 		const allFolders: TFolder[] = [new TFolder(this.app.vault, "/")].concat(
-			this.app.vault.getAllFolders()
+			this.app.vault.getAllFolders(),
 		);
 
 		const normalizedQuery = this.normalizeQuery(query);
@@ -279,7 +284,7 @@ class FilePathPromptModal extends Modal {
 
 	constructor(
 		app: App,
-		{ baseFileName, initialPath = "/" }: FilePathPromptModalOptions
+		{ baseFileName, initialPath = "/" }: FilePathPromptModalOptions,
 	) {
 		super(app);
 		this.baseFileName = baseFileName;
@@ -374,7 +379,9 @@ class FilePathPromptModal extends Modal {
 		titleEl.setText(t("modals.confirmSaveLocation.title"));
 
 		contentEl.createEl("p", {
-			text: t("modals.confirmSaveLocation.convertingNote", { title: this.baseFileName }),
+			text: t("modals.confirmSaveLocation.convertingNote", {
+				title: this.baseFileName,
+			}),
 		});
 
 		// File name input
@@ -382,14 +389,13 @@ class FilePathPromptModal extends Modal {
 			.setName(t("modals.confirmSaveLocation.fileName.name"))
 			.setDesc(t("modals.confirmSaveLocation.fileName.desc"))
 			.addText((text) => {
-				text.setPlaceholder(t("modals.confirmSaveLocation.fileName.placeholder"))
+				text
+					.setPlaceholder(t("modals.confirmSaveLocation.fileName.placeholder"))
 					.setValue(this.fileName)
 					.onChange((value) => {
 						this.fileName = value;
 					});
-				text.inputEl.addEventListener("keydown", (e) =>
-					this.onKeydown(e)
-				);
+				text.inputEl.addEventListener("keydown", (e) => this.onKeydown(e));
 			});
 
 		// Folder path input with autocomplete
@@ -398,14 +404,14 @@ class FilePathPromptModal extends Modal {
 			.setDesc(t("modals.confirmSaveLocation.folderPath.desc"))
 			.addSearch((search) => {
 				search
-					.setPlaceholder(t("modals.confirmSaveLocation.folderPath.placeholder"))
+					.setPlaceholder(
+						t("modals.confirmSaveLocation.folderPath.placeholder"),
+					)
 					.setValue(this.folderPath)
 					.onChange((value) => {
 						this.folderPath = value;
 					});
-				search.inputEl.addEventListener("keydown", (e) =>
-					this.onKeydown(e)
-				);
+				search.inputEl.addEventListener("keydown", (e) => this.onKeydown(e));
 				new FolderSuggest(this.app, search.inputEl);
 			});
 
@@ -415,16 +421,18 @@ class FilePathPromptModal extends Modal {
 				btn
 					.setButtonText(t("modals.confirmSaveLocation.buttons.save"))
 					.setCta()
-					.onClick(() => this.submit())
+					.onClick(() => this.submit()),
 			)
 			.addButton((btn) =>
-				btn.setButtonText(t("modals.confirmSaveLocation.buttons.cancel")).onClick(() =>
-					this.resolveAndClose({
-						fullPath: null,
-						baseFileName: null,
-						resolved: false,
-					})
-				)
+				btn
+					.setButtonText(t("modals.confirmSaveLocation.buttons.cancel"))
+					.onClick(() =>
+						this.resolveAndClose({
+							fullPath: null,
+							baseFileName: null,
+							resolved: false,
+						}),
+					),
 			);
 	}
 
@@ -455,7 +463,7 @@ class FilePathPromptModal extends Modal {
 
 export async function showFilePathPrompt(
 	app: App,
-	options: FilePathPromptModalOptions
+	options: FilePathPromptModalOptions,
 ): Promise<FilePathPromptModalResult> {
 	return new FilePathPromptModal(app, options).waitForResult();
 }

@@ -9,7 +9,7 @@ const logger = log.getLogger("Utils");
 
 // --- Main Conversion Utility ---
 export async function extractToFileInteraction<T extends AbstractNoteView>(
-	view: T
+	view: T,
 ) {
 	const settings: PluginSettings = view.pluginSettings;
 
@@ -30,15 +30,13 @@ export async function extractToFileInteraction<T extends AbstractNoteView>(
 		const sanitizedBasename = sanitizeFilename(baseTitle);
 
 		// Determine save path.
-		const defaultLocation = settings[
-			"fileOperation.useObsidianDefaultLocation"
-		]
+		const defaultLocation = settings["fileOperation.useObsidianDefaultLocation"]
 			? (view.app.vault.getConfig("newFileFolderPath") as string)
 			: settings["fileOperation.defaultSavePath"];
 
 		const suggestedPath = buildSuggestedPath(
 			defaultLocation,
-			sanitizedBasename
+			sanitizedBasename,
 		);
 
 		// Resolve the final file path.
@@ -46,7 +44,7 @@ export async function extractToFileInteraction<T extends AbstractNoteView>(
 			view.app,
 			settings,
 			suggestedPath,
-			sanitizedBasename
+			sanitizedBasename,
 		);
 
 		// If canceled
@@ -81,7 +79,7 @@ async function resolveFinalPath(
 	app: App,
 	settings: PluginSettings,
 	suggestedPath: string,
-	basename: string
+	basename: string,
 ): Promise<string | null> {
 	if (settings["fileOperation.confirmBeforeSaving"]) {
 		const result = await showFilePathPrompt(app, {
@@ -99,7 +97,7 @@ async function createAndOpenFile<T extends AbstractNoteView>(
 	view: T,
 	filePath: string,
 	content: string,
-	baseTitle: string
+	baseTitle: string,
 ): Promise<void> {
 	const availablePath = view.app.vault.getAvailablePath(filePath, "md");
 	view.app.workspace.activeEditor?.editor?.setValue(content);
@@ -107,7 +105,7 @@ async function createAndOpenFile<T extends AbstractNoteView>(
 	view.setContent("");
 	await view.leaf.openFile(newFile);
 	new Notice(
-		t("notices.convertedToFile", { title: baseTitle, path: availablePath })
+		t("notices.convertedToFile", { title: baseTitle, path: availablePath }),
 	);
 }
 
@@ -123,9 +121,7 @@ function handleConversionError(error: Error): void {
 
 export function getSandboxVaultPath() {
 	try {
-		return require("electron").ipcRenderer.sendSync(
-			"get-sandbox-vault-path"
-		);
+		return require("electron").ipcRenderer.sendSync("get-sandbox-vault-path");
 	} catch {
 		return undefined;
 	}

@@ -16,7 +16,7 @@ export class EventEmitter<Events extends object> {
 
 	on<K extends keyof Events>(
 		event: K,
-		listener: Listener<Events[K]>
+		listener: Listener<Events[K]>,
 	): () => void {
 		if (!this.listeners[event]) {
 			this.listeners[event] = [];
@@ -29,14 +29,11 @@ export class EventEmitter<Events extends object> {
 
 	off<K extends keyof Events>(event: K, listener: Listener<Events[K]>): void {
 		this.listeners[event] = this.listeners[event]?.filter(
-			(l) => l !== listener
+			(l) => l !== listener,
 		);
 	}
 
-	once<K extends keyof Events>(
-		event: K,
-		listener: Listener<Events[K]>
-	): void {
+	once<K extends keyof Events>(event: K, listener: Listener<Events[K]>): void {
 		const onceListener: Listener<Events[K]> = (payload) => {
 			listener(payload);
 			this.off(event, onceListener);

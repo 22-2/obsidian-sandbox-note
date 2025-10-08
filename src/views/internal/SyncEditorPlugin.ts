@@ -32,7 +32,7 @@ export class SyncEditorPlugin implements PluginValue {
 	connectToPlugin(
 		plugin: SandboxNotePlugin,
 		view: AbstractNoteView,
-		emitter: EventEmitter<AppEvents>
+		emitter: EventEmitter<AppEvents>,
 	): void {
 		this.connectedPlugin = plugin;
 		this.connectedView = view;

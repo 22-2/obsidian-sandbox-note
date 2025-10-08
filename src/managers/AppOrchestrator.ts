@@ -107,7 +107,7 @@ export class AppOrchestrator implements IManager {
 				loadData: this.plugin.loadData.bind(this.plugin),
 				saveData: this.plugin.saveData.bind(this.plugin),
 				getObsidianConfig: this.plugin.app.vault.getConfig.bind(
-					this.plugin.app.vault
+					this.plugin.app.vault,
 				),
 			});
 		});
@@ -135,8 +135,7 @@ export class AppOrchestrator implements IManager {
 					delete: (noteId: string) => cache.delete(noteId),
 				},
 				emitter: this.emitter,
-				getAllHotSandboxViews: () =>
-					this.get("viewManager").getAllViews(),
+				getAllHotSandboxViews: () => this.get("viewManager").getAllViews(),
 			});
 		});
 	}
@@ -170,7 +169,7 @@ export class AppOrchestrator implements IManager {
 
 	private createHotSandboxNoteView(
 		leaf: WorkspaceLeaf,
-		viewManager: ViewManager
+		viewManager: ViewManager,
 	): HotSandboxNoteView {
 		const settings = this.get("settingsManager");
 
@@ -185,8 +184,7 @@ export class AppOrchestrator implements IManager {
 				return groupCount === -1 ? 0 : groupCount + 1;
 			},
 			isLastHotView: (id: string) => viewManager.isLastHotView(id),
-			deleteFromAll: (id: string) =>
-				this.get("dbManager").deleteFromAll(id),
+			deleteFromAll: (id: string) => this.get("dbManager").deleteFromAll(id),
 		});
 	}
 
@@ -236,10 +234,8 @@ export class AppOrchestrator implements IManager {
 					db.immediateSave(masterId, content),
 				clearOldDeadSandboxes: () => db.clearOldDeadSandboxes(),
 				getAllViews: () => views.getAllViews(),
-				isLastHotView: (masterId: string) =>
-					views.isLastHotView(masterId),
-				deleteFromAll: (masterId: string | null) =>
-					db.deleteFromAll(masterId),
+				isLastHotView: (masterId: string) => views.isLastHotView(masterId),
+				deleteFromAll: (masterId: string | null) => db.deleteFromAll(masterId),
 				togglLoggersBy: this.plugin.togglLoggersBy.bind(this.plugin),
 			});
 		});
@@ -253,7 +249,7 @@ export class AppOrchestrator implements IManager {
 					getActiveView: () => views.getActiveView(),
 					workspaceEvents: this.plugin.app.workspace,
 				},
-				this.emitter
+				this.emitter,
 			);
 		});
 	}
@@ -263,11 +259,8 @@ export class AppOrchestrator implements IManager {
 			const views = this.get("viewManager");
 			return new URIManager({
 				registerObsidianProtocolHandler:
-					this.plugin.registerObsidianProtocolHandler.bind(
-						this.plugin
-					),
-				createAndOpenSandbox: (content) =>
-					views.createAndOpenSandbox(content),
+					this.plugin.registerObsidianProtocolHandler.bind(this.plugin),
+				createAndOpenSandbox: (content) => views.createAndOpenSandbox(content),
 			});
 		});
 	}
@@ -279,7 +272,7 @@ export class AppOrchestrator implements IManager {
 				register: this.plugin.register.bind(this.plugin),
 				getActiveView: () => this.get("viewManager").getActiveView(),
 				findCommand: this.plugin.app.commands.findCommand.bind(
-					this.plugin.app.commands
+					this.plugin.app.commands,
 				),
 				getSettings: () => this.get("settingsManager").getSettings(),
 			});
@@ -301,10 +294,7 @@ export class AppOrchestrator implements IManager {
 		for (const name of reversedNames) {
 			const manager = this.instances.get(name);
 			if (manager) {
-				invariant(
-					manager.unload,
-					`Manager ${name} must have an unload method`
-				);
+				invariant(manager.unload, `Manager ${name} must have an unload method`);
 				manager.unload();
 			}
 		}
@@ -327,7 +317,7 @@ export class AppOrchestrator implements IManager {
 	}
 
 	async updateSettings(
-		settings: Parameters<SettingsManager["updateSettingsAndSave"]>[0]
+		settings: Parameters<SettingsManager["updateSettingsAndSave"]>[0],
 	) {
 		await this.get("settingsManager").updateSettingsAndSave(settings);
 	}

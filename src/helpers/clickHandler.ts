@@ -3,7 +3,7 @@ import { Editor, MarkdownEditView } from "obsidian";
 /** Handle right-click context menu events. */
 export const handleContextMenu = async (
 	e: PointerEvent,
-	editMode: MarkdownEditView
+	editMode: MarkdownEditView,
 ) => {
 	const target = e.target;
 	if (!(target instanceof HTMLElement)) return;

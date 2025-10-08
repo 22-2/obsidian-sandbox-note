@@ -33,18 +33,15 @@ export class PluginEventManager implements IManager {
 	load(): void {
 		this.context.emitter.on(
 			"editor-content-changed",
-			this.handleEditorContentChanged
+			this.handleEditorContentChanged,
 		);
 		this.context.emitter.on(
 			"connect-editor-plugin",
-			this.handleConnectEditorPlugin
+			this.handleConnectEditorPlugin,
 		);
 		this.context.emitter.on("settings-changed", this.handleSettingsChanged);
 		this.context.emitter.on("view-closed", this.handleViewClosed);
-		this.context.emitter.on(
-			"obsidian-layout-ready",
-			this.handleLayoutReady
-		);
+		this.context.emitter.on("obsidian-layout-ready", this.handleLayoutReady);
 		this.context.emitter.on("plugin-unload", this.handleUnload);
 		// this.handleSettingsChanged({
 		// 	newSettings: this.context.settings.getSettings(),
@@ -54,16 +51,13 @@ export class PluginEventManager implements IManager {
 	unload(): void {
 		this.context.emitter.off(
 			"editor-content-changed",
-			this.handleEditorContentChanged
+			this.handleEditorContentChanged,
 		);
 		this.context.emitter.off(
 			"connect-editor-plugin",
-			this.handleConnectEditorPlugin
+			this.handleConnectEditorPlugin,
 		);
-		this.context.emitter.off(
-			"settings-changed",
-			this.handleSettingsChanged
-		);
+		this.context.emitter.off("settings-changed", this.handleSettingsChanged);
 	}
 
 	private handleLayoutReady = () => {
@@ -77,21 +71,21 @@ export class PluginEventManager implements IManager {
 			if (this.context.isLastHotView(view.masterId)) {
 				try {
 					logger.debug(
-						`💾 Immediate save on view close for: ${view.masterId}, content length: ${content.length}`
+						`💾 Immediate save on view close for: ${view.masterId}, content length: ${content.length}`,
 					);
 					await this.context.immediateSave(view.masterId, content);
 					logger.debug(`✅ Saved to IndexedDB for: ${view.masterId}`);
 				} catch (error) {
 					logger.warn(
 						`❌ Failed to save on view close: ${view.masterId}`,
-						error
+						error,
 					);
 				}
 
 				// Remove from in-memory cache only (keep in IndexedDB for 3-day retention)
 				this.context.cache.delete(view.masterId);
 				logger.debug(
-					`🗑️ Removed from cache (kept in IndexedDB): ${view.masterId}`
+					`🗑️ Removed from cache (kept in IndexedDB): ${view.masterId}`,
 				);
 			}
 		}
@@ -103,26 +97,22 @@ export class PluginEventManager implements IManager {
 
 		// Immediately save all views before unload
 		const savePromises = views
-			.filter(
-				(view) => view instanceof HotSandboxNoteView && view.masterId
-			)
+			.filter((view) => view instanceof HotSandboxNoteView && view.masterId)
 			.map(async (view) => {
 				const hotView = view as HotSandboxNoteView;
 				try {
-					logger.debug(
-						`Immediate save on unload for: ${hotView.masterId}`
-					);
+					logger.debug(`Immediate save on unload for: ${hotView.masterId}`);
 					await this.context.immediateSave(
 						hotView.masterId!,
-						hotView.getContent()
+						hotView.getContent(),
 					);
 					logger.debug(
-						`Immediate save completed on unload for: ${hotView.masterId}`
+						`Immediate save completed on unload for: ${hotView.masterId}`,
 					);
 				} catch (error) {
 					logger.warn(
 						`Failed to immediately save on unload: ${hotView.masterId}`,
-						error
+						error,
 					);
 				}
 			});
@@ -132,37 +122,28 @@ export class PluginEventManager implements IManager {
 	};
 
 	private handleConnectEditorPlugin = (
-		payload: AppEvents["connect-editor-plugin"]
+		payload: AppEvents["connect-editor-plugin"],
 	) => {
 		this.context.connectEditorPluginToView(payload.view);
 	};
 
-	private handleSettingsChanged = (
-		payload: AppEvents["settings-changed"]
-	) => {
+	private handleSettingsChanged = (payload: AppEvents["settings-changed"]) => {
 		this.context.togglLoggersBy(
-			payload.newSettings["advanced.enableLogger"] ? "debug" : "warn"
+			payload.newSettings["advanced.enableLogger"] ? "debug" : "warn",
 		);
 		logger.debug("Logger initialized");
 	};
 
 	private handleEditorContentChanged = (
-		payload: AppEvents["editor-content-changed"]
+		payload: AppEvents["editor-content-changed"],
 	) => {
 		const { content, sourceView } = payload;
 
 		if (sourceView instanceof HotSandboxNoteView && sourceView.masterId) {
 			// インメモリ状態を更新
-			this.context.cache.updateSandboxContent(
-				sourceView.masterId,
-				content
-			);
+			this.context.cache.updateSandboxContent(sourceView.masterId, content);
 
-			this.context.saveSandbox(
-				sourceView.masterId,
-				content,
-				SAVE_DEBOUNCE_MS
-			);
+			this.context.saveSandbox(sourceView.masterId, content, SAVE_DEBOUNCE_MS);
 		}
 	};
 }

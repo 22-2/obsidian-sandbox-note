@@ -111,9 +111,7 @@ class MockVaultFileSystem {
 
 	exists(path: string): boolean {
 		const normalizedPath = this.normalizePath(path);
-		return (
-			this.files.has(normalizedPath) || this.folders.has(normalizedPath)
-		);
+		return this.files.has(normalizedPath) || this.folders.has(normalizedPath);
 	}
 
 	read(path: string): string {
@@ -338,14 +336,14 @@ export class Vault {
 	// Event management
 	on(
 		event: "create" | "modify" | "delete" | "rename",
-		callback: (...args: any[]) => void
+		callback: (...args: any[]) => void,
 	): void {
 		this.emitter.on(event, callback);
 	}
 
 	off(
 		event: "create" | "modify" | "delete" | "rename",
-		callback: (...args: any[]) => void
+		callback: (...args: any[]) => void,
 	): void {
 		this.emitter.off(event, callback);
 	}
@@ -381,14 +379,14 @@ export class MetadataCache {
 	// Event management
 	on(
 		event: "changed" | "resolve" | "resolved",
-		callback: (...args: any[]) => void
+		callback: (...args: any[]) => void,
 	): void {
 		this.emitter.on(event, callback);
 	}
 
 	off(
 		event: "changed" | "resolve" | "resolved",
-		callback: (...args: any[]) => void
+		callback: (...args: any[]) => void,
 	): void {
 		this.emitter.off(event, callback);
 	}
@@ -402,14 +400,14 @@ export class MetadataCache {
 export class FileManager {
 	async generateMarkdownLink(
 		file: TFile,
-		sourcePath?: string
+		sourcePath?: string,
 	): Promise<string> {
 		return `[[${file.basename}]]`;
 	}
 
 	async processFrontMatter(
 		file: TFile,
-		fn: (frontmatter: any) => void
+		fn: (frontmatter: any) => void,
 	): Promise<void> {
 		// Mock implementation
 		const content = mockFileSystem.read(file.path);
@@ -448,7 +446,7 @@ export class Workspace {
 
 	getViewsOfType(type: string): any[] {
 		return Array.from(this.views.values()).filter(
-			(view) => view.getViewType() === type
+			(view) => view.getViewType() === type,
 		);
 	}
 
@@ -496,9 +494,7 @@ export class App {
 
 	loadLocalStorage = vi.fn((key: string) => {
 		try {
-			return JSON.parse(
-				localStorage.getItem(`obsidian-app-${key}`) || "null"
-			);
+			return JSON.parse(localStorage.getItem(`obsidian-app-${key}`) || "null");
 		} catch {
 			return null;
 		}
@@ -517,14 +513,14 @@ export class App {
 		mockFileSystem.on("create", (file: MockFile) => {
 			this.metadataCache.setCache(
 				file.path,
-				this.parseFileMetadata(file.content)
+				this.parseFileMetadata(file.content),
 			);
 		});
 
 		mockFileSystem.on("modify", (file: MockFile) => {
 			this.metadataCache.setCache(
 				file.path,
-				this.parseFileMetadata(file.content)
+				this.parseFileMetadata(file.content),
 			);
 		});
 
@@ -625,9 +621,10 @@ export class Modal extends Component {
 			this.classList.remove(...classes);
 			return this;
 		};
-		this.contentEl.createEl = function <
-			T extends keyof HTMLElementTagNameMap
-		>(tag: T, attrs?: any): HTMLElementTagNameMap[T] {
+		this.contentEl.createEl = function <T extends keyof HTMLElementTagNameMap>(
+			tag: T,
+			attrs?: any,
+		): HTMLElementTagNameMap[T] {
 			const el = document.createElement(tag);
 			if (attrs) {
 				if (attrs.cls) {
@@ -716,7 +713,7 @@ export abstract class FuzzySuggestModal<T> extends Modal {
 	// Mock methods for fuzzy search functionality
 	setPlaceholder(placeholder: string): void {}
 	setInstructions(
-		instructions: Array<{ command: string; purpose: string }>
+		instructions: Array<{ command: string; purpose: string }>,
 	): void {}
 }
 
@@ -730,7 +727,7 @@ export abstract class AbstractInputSuggest<T> {
 	abstract renderSuggestion(suggestion: T, el: HTMLElement): void;
 	abstract selectSuggestion(
 		suggestion: T,
-		evt: MouseEvent | KeyboardEvent
+		evt: MouseEvent | KeyboardEvent,
 	): void;
 
 	// Mock methods
@@ -776,7 +773,7 @@ export class ItemView extends Component {
 		el: HTMLElement,
 		type: K,
 		listener: (this: HTMLElement, ev: HTMLElementEventMap[K]) => any,
-		options?: boolean | AddEventListenerOptions
+		options?: boolean | AddEventListenerOptions,
 	): void {
 		el.addEventListener(type, listener, options);
 	}
@@ -1044,21 +1041,19 @@ export const requestUrl = vi.fn().mockImplementation(async (options: any) => {
 // Menu mock class
 export const Menu = vi.fn().mockImplementation(() => ({
 	items: [],
-	addItem: vi
-		.fn()
-		.mockImplementation(function (
-			this: any,
-			callback: (item: any) => void
-		) {
-			const mockItem = {
-				setTitle: vi.fn().mockReturnThis(),
-				setIcon: vi.fn().mockReturnThis(),
-				onClick: vi.fn().mockReturnThis(),
-				setSection: vi.fn().mockReturnThis(),
-			};
-			callback(mockItem);
-			this.items.push(mockItem);
-		}),
+	addItem: vi.fn().mockImplementation(function (
+		this: any,
+		callback: (item: any) => void,
+	) {
+		const mockItem = {
+			setTitle: vi.fn().mockReturnThis(),
+			setIcon: vi.fn().mockReturnThis(),
+			onClick: vi.fn().mockReturnThis(),
+			setSection: vi.fn().mockReturnThis(),
+		};
+		callback(mockItem);
+		this.items.push(mockItem);
+	}),
 	addSeparator: vi.fn().mockImplementation(function (this: any) {
 		this.items.push({ type: "separator" });
 	}),
@@ -1098,7 +1093,7 @@ export function setIcon(element: HTMLElement, iconName: string): void {
 export function setTooltip(
 	element: HTMLElement,
 	tooltip: string,
-	options?: { placement?: string }
+	options?: { placement?: string },
 ): void {
 	// Mock implementation - just add tooltip attributes
 	element.setAttribute("data-tooltip", tooltip);

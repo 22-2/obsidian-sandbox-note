@@ -33,7 +33,7 @@ export async function activateView<T = any, U = any>(
 		getLeaf: Workspace["getLeaf"];
 	},
 	viewState: UViewState,
-	eState?: U
+	eState?: U,
 ): Promise<T> {
 	const leaf: WorkspaceLeaf = getLeaf("tab");
 
@@ -59,7 +59,7 @@ export function getAllLeaves(app: App): WorkspaceLeaf[] {
 /** Get workspace items of specific type. */
 function getWorkspaceItems<T extends WorkspaceWindow | WorkspaceParent>(
 	app: App,
-	getItem: (leaf: WorkspaceLeaf) => T | null | undefined
+	getItem: (leaf: WorkspaceLeaf) => T | null | undefined,
 ): T[] {
 	const itemMap = new Map<string, T>();
 	getAllLeaves(app).forEach((leaf) => {
@@ -73,7 +73,5 @@ function getWorkspaceItems<T extends WorkspaceWindow | WorkspaceParent>(
 
 /** Get all workspace windows. */
 export function getAllWorkspaceWindows(app: App): WorkspaceWindow[] {
-	return getWorkspaceItems<WorkspaceWindow>(app, (leaf) =>
-		leaf.getContainer()
-	);
+	return getWorkspaceItems<WorkspaceWindow>(app, (leaf) => leaf.getContainer());
 }

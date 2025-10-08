@@ -26,7 +26,7 @@ export class ViewManager implements IManager {
 	/** Register custom view types with Obsidian */
 	public load(): void {
 		this.context.registerView(VIEW_TYPE_HOT_SANDBOX, (leaf) =>
-			this.context.createView(leaf)
+			this.context.createView(leaf),
 		);
 	}
 
@@ -41,7 +41,7 @@ export class ViewManager implements IManager {
 			{
 				type: VIEW_TYPE_HOT_SANDBOX,
 				active: true,
-			}
+			},
 		);
 	}
 

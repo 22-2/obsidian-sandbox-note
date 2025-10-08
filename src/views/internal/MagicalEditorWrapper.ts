@@ -33,22 +33,22 @@ export class MagicalEditorWrapper {
 	constructor(private context: Context) {
 		this.context.emitter.on(
 			"obsidian-active-leaf-changed",
-			this.syncActiveEditorState.bind(this)
+			this.syncActiveEditorState.bind(this),
 		);
 		this.context.emitter.on(
 			"obsidian-layout-changed",
-			this.syncActiveEditorState.bind(this)
+			this.syncActiveEditorState.bind(this),
 		);
 		this.context.emitter.on(
 			"obsidian-layout-ready",
-			this.syncActiveEditorState.bind(this)
+			this.syncActiveEditorState.bind(this),
 		);
 	}
 
 	/** Initialize the editor and load content. */
 	async initialize(
 		target: HTMLElement,
-		initialState: AbstractNoteViewState | null
+		initialState: AbstractNoteViewState | null,
 	) {
 		await this.onload(); // Create virtual editor
 		const editorContainer = target.createEl("div", {
@@ -57,8 +57,7 @@ export class MagicalEditorWrapper {
 		this.load(editorContainer); // Attach to DOM and focus
 
 		const initialContent =
-			initialState?.content ??
-			(await this.context.parentView.getContent());
+			initialState?.content ?? (await this.context.parentView.getContent());
 		this.content = initialContent;
 		this.context.parentView.setContent(initialContent);
 
@@ -112,15 +111,15 @@ export class MagicalEditorWrapper {
 
 		this.context.emitter.off(
 			"obsidian-active-leaf-changed",
-			this.syncActiveEditorState.bind(this)
+			this.syncActiveEditorState.bind(this),
 		);
 		this.context.emitter.off(
 			"obsidian-layout-changed",
-			this.syncActiveEditorState.bind(this)
+			this.syncActiveEditorState.bind(this),
 		);
 		this.context.emitter.off(
 			"obsidian-layout-ready",
-			this.syncActiveEditorState.bind(this)
+			this.syncActiveEditorState.bind(this),
 		);
 		if (this.targetEl) {
 			this.targetEl.empty();
@@ -134,7 +133,7 @@ export class MagicalEditorWrapper {
 		this.containerEl.addClasses(["sandbox-inline-editor"]);
 
 		this.magicalEditor = new MarkdownView(
-			this.createFakeLeaf()
+			this.createFakeLeaf(),
 		) as VirtualMarkdownView;
 		// this.virtualEditor.file = createVirtualFile(this.context.parentView.app);
 		this.magicalEditor.leaf.working = false;
@@ -179,7 +178,7 @@ export class MagicalEditorWrapper {
 				}
 				this.context.parentView.leaf.setViewState(
 					state,
-					result || { history: false }
+					result || { history: false },
 				);
 			},
 			__FAKE_LEAF__: true,

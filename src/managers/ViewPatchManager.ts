@@ -55,15 +55,12 @@ export class ViewPatchManager implements IManager {
 	 */
 	private applyLeafDetachPatch(): void {
 		logger.debug("Applying detach patch to WorkspaceLeaf.prototype");
-		
+
 		// detachメソッドをパッチ
 		const detachCleanup = around(WorkspaceLeaf.prototype, {
 			detach: (orig) =>
 				async function (this: WorkspaceLeaf) {
-					logger.debug(
-						"detach called, view type:",
-						this.view?.getViewType()
-					);
+					logger.debug("detach called, view type:", this.view?.getViewType());
 					if (!(this.view instanceof HotSandboxNoteView)) {
 						logger.debug("default close");
 						return orig.call(this);
@@ -71,8 +68,7 @@ export class ViewPatchManager implements IManager {
 
 					const shouldInitialClose =
 						Platform.isDesktopApp &&
-						getSandboxVaultPath() ===
-							this.app.vault.adapter.basePath &&
+						getSandboxVaultPath() === this.app.vault.adapter.basePath &&
 						this.app.vault.getName() === "Obsidian Sandbox";
 
 					logger.debug("shouldInitialClose", shouldInitialClose);
@@ -86,9 +82,7 @@ export class ViewPatchManager implements IManager {
 					let shouldClose = false;
 					try {
 						logger.debug("shouldClose check");
-						shouldClose = await (
-							this.view as HotSandboxNoteView
-						).shouldClose();
+						shouldClose = await (this.view as HotSandboxNoteView).shouldClose();
 						logger.debug("check done");
 					} catch (error) {
 						logger.error("Error during shouldClose check:", error);
@@ -106,7 +100,7 @@ export class ViewPatchManager implements IManager {
 		});
 		this.patchCleanupFns.push(detachCleanup);
 		this.context.register(detachCleanup);
-		
+
 		// 他のメソッドもパッチして、どれが呼ばれているかを確認
 		const closeCleanup = around(WorkspaceLeaf.prototype, {
 			close: (orig) =>
@@ -124,8 +118,7 @@ export class ViewPatchManager implements IManager {
 	 * and execute HotSandboxNoteView's save logic (conversion to file).
 	 */
 	private applyLeafSavePatch(): void {
-		const saveCommandDefinition =
-			this.context.findCommand("editor:save-file");
+		const saveCommandDefinition = this.context.findCommand("editor:save-file");
 		if (!saveCommandDefinition?.checkCallback) {
 			logger.debug("saveCommandDefinition.checkCallback not found");
 			return;
@@ -159,50 +152,54 @@ export class ViewPatchManager implements IManager {
 	 */
 	private applyCloseButtonPatch(): void {
 		logger.debug("Applying close button patch");
-		
+
 		// DOMイベントリスナーを使用してクローズボタンのクリックをインターセプト
 		const handleCloseButtonClick = async (event: MouseEvent) => {
 			const target = event.target as HTMLElement;
-			
+
 			// クローズボタンかどうかを確認
-			if (!target.classList.contains('workspace-tab-header-inner-close-button')) {
+			if (
+				!target.classList.contains("workspace-tab-header-inner-close-button")
+			) {
 				return;
 			}
-			
+
 			logger.debug("Close button clicked");
-			
+
 			// 対応するタブヘッダーを見つける
-			const tabHeader = target.closest('.workspace-tab-header') as HTMLElement;
+			const tabHeader = target.closest(".workspace-tab-header") as HTMLElement;
 			if (!tabHeader) {
 				logger.debug("Tab header not found");
 				return;
 			}
-			
+
 			// タブに対応するLeafを見つける
 			const workspace = (window as any).app?.workspace;
 			if (!workspace) {
 				logger.debug("Workspace not found");
 				return;
 			}
-			
+
 			// アクティブなLeafを取得（簡易的な実装）
 			const activeLeaf = workspace.activeLeaf;
 			if (!activeLeaf || !(activeLeaf.view instanceof HotSandboxNoteView)) {
 				logger.debug("Not a HotSandboxNoteView, allowing default behavior");
 				return;
 			}
-			
-			logger.debug("HotSandboxNoteView close button clicked, checking shouldClose");
-			
+
+			logger.debug(
+				"HotSandboxNoteView close button clicked, checking shouldClose",
+			);
+
 			// イベントを停止
 			event.preventDefault();
 			event.stopPropagation();
-			
+
 			// shouldCloseをチェック
 			try {
 				const shouldClose = await activeLeaf.view.shouldClose();
 				logger.debug(`shouldClose result: ${shouldClose}`);
-				
+
 				if (shouldClose) {
 					logger.debug("Proceeding with close");
 					// 元のクローズ処理を実行
@@ -216,18 +213,18 @@ export class ViewPatchManager implements IManager {
 				activeLeaf.detach();
 			}
 		};
-		
+
 		// ドキュメント全体にイベントリスナーを追加
-		document.addEventListener('click', handleCloseButtonClick, true);
-		
+		document.addEventListener("click", handleCloseButtonClick, true);
+
 		// クリーンアップ関数を登録
 		const cleanup = () => {
-			document.removeEventListener('click', handleCloseButtonClick, true);
+			document.removeEventListener("click", handleCloseButtonClick, true);
 		};
-		
+
 		this.patchCleanupFns.push(cleanup);
 		this.context.register(cleanup);
-		
+
 		logger.debug("Close button patch applied");
 	}
 }

@@ -33,9 +33,7 @@ export default class SandboxNotePlugin extends Plugin {
 
 		// Determine the initial log level based on the loaded settings.
 		const settings = this.orchestrator.getSettings();
-		this.togglLoggersBy(
-			settings["advanced.enableLogger"] ? "debug" : "warn"
-		);
+		this.togglLoggersBy(settings["advanced.enableLogger"] ? "debug" : "warn");
 
 		this.setupSettingsTab();
 		this.setupCommandsAndRibbons();
@@ -75,9 +73,7 @@ export default class SandboxNotePlugin extends Plugin {
 					if (!checking) {
 						extractToFileInteraction(view).then((success) => {
 							if (success && view.masterId) {
-								this.orchestrator
-									.get("dbManager")
-									.deleteFromAll(view.masterId);
+								this.orchestrator.get("dbManager").deleteFromAll(view.masterId);
 							}
 						});
 					}
@@ -93,7 +89,7 @@ export default class SandboxNotePlugin extends Plugin {
 			t("ribbonIcon.openHotSandboxNote"),
 			() => {
 				this.activateNewHotSandboxView();
-			}
+			},
 		);
 	}
 
@@ -114,7 +110,7 @@ export default class SandboxNotePlugin extends Plugin {
 
 	togglLoggersBy(
 		level: log.LogLevelDesc,
-		filter: (name: string) => boolean = () => true
+		filter: (name: string) => boolean = () => true,
 	): void {
 		Object.values(log.getLoggers())
 			// @ts-expect-error

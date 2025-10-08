@@ -15,22 +15,25 @@ export function setLanguage(lang: string) {
  * @param keyPath - Dot-separated path to translation key (e.g., "settings.appearance.firstLineAsTitle.name")
  * @param params - Optional parameters for string interpolation
  */
-export function t(keyPath: string, params?: Record<string, string | number>): string {
+export function t(
+	keyPath: string,
+	params?: Record<string, string | number>,
+): string {
 	const lang = translations[currentLanguage] || translations.en;
 	const value = getNestedValue(lang, keyPath);
-	
-	if (value && typeof value === 'string') {
+
+	if (value && typeof value === "string") {
 		return interpolateParams(value, params);
 	}
-	
+
 	// Fallback to English if not found in current language
 	if (currentLanguage !== "en") {
 		const fallbackValue = getNestedValue(translations.en, keyPath);
-		if (fallbackValue && typeof fallbackValue === 'string') {
+		if (fallbackValue && typeof fallbackValue === "string") {
 			return interpolateParams(fallbackValue, params);
 		}
 	}
-	
+
 	// Return the key path if no translation found
 	return keyPath;
 }
@@ -39,7 +42,7 @@ export function t(keyPath: string, params?: Record<string, string | number>): st
  * Get nested value from object using dot notation
  */
 function getNestedValue(obj: any, path: string): any {
-	return path.split('.').reduce((current, key) => {
+	return path.split(".").reduce((current, key) => {
 		return current && current[key] !== undefined ? current[key] : undefined;
 	}, obj);
 }
@@ -47,9 +50,12 @@ function getNestedValue(obj: any, path: string): any {
 /**
  * Replace {{param}} placeholders with actual values
  */
-function interpolateParams(text: string, params?: Record<string, string | number>): string {
+function interpolateParams(
+	text: string,
+	params?: Record<string, string | number>,
+): string {
 	if (!params) return text;
-	
+
 	return text.replace(/\{\{(\w+)\}\}/g, (match, key) => {
 		return params[key] !== undefined ? String(params[key]) : match;
 	});

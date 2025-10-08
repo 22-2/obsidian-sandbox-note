@@ -1,6 +1,5 @@
 // src/views/internal/AbstractNoteView.ts (修正版)
 
-
 import log from "loglevel";
 import { nanoid } from "nanoid";
 import type { Editor, MarkdownEditView } from "obsidian";
@@ -48,7 +47,10 @@ export abstract class AbstractNoteView extends ItemView {
 		return this.context.getSettings();
 	}
 
-	constructor(leaf: WorkspaceLeaf, protected context: Context) {
+	constructor(
+		leaf: WorkspaceLeaf,
+		protected context: Context,
+	) {
 		super(leaf);
 		// Ensure masterId is initialized.
 		this.masterId = `${HOT_SANDBOX_ID_PREFIX}-${nanoid()}`;
@@ -65,7 +67,7 @@ export abstract class AbstractNoteView extends ItemView {
 		this.eventHandler = new ViewEventHandler(
 			this.context.emitter,
 			() => this.editor,
-			() => this.wrapper.magicalEditor?.editMode
+			() => this.wrapper.magicalEditor?.editMode,
 		);
 	}
 
@@ -110,7 +112,7 @@ export abstract class AbstractNoteView extends ItemView {
 		return this.stateManager.buildState(
 			this.getViewType(),
 			this.masterId,
-			minimalState // Pass a minimal state without content.
+			minimalState, // Pass a minimal state without content.
 		);
 	}
 
@@ -123,7 +125,7 @@ export abstract class AbstractNoteView extends ItemView {
 			// Check if we need to restore content from IndexedDB after editor initialization
 			if (this.stateManager.getNeedsContentRestoration()) {
 				logger.debug(
-					`Requesting content restoration after editor init: ${this.masterId}`
+					`Requesting content restoration after editor init: ${this.masterId}`,
 				);
 				this.context.emitter.emit("request-content-restoration", {
 					view: this,
@@ -152,11 +154,8 @@ export abstract class AbstractNoteView extends ItemView {
 	}
 
 	public override async setState(
-		{
-			content,
-			...stateWithoutContent
-		}: AbstractNoteViewState = {} as never,
-		result: ViewStateResult
+		{ content, ...stateWithoutContent }: AbstractNoteViewState = {} as never,
+		result: ViewStateResult,
 	): Promise<void> {
 		const newMasterId = stateWithoutContent?.state?.masterId;
 		const isWorkspaceRestore = newMasterId && newMasterId !== this.masterId;
@@ -165,8 +164,8 @@ export abstract class AbstractNoteView extends ItemView {
 			type: isWorkspaceRestore
 				? "workspace-restore"
 				: this.editor
-				? "state-update"
-				: "new-view",
+					? "state-update"
+					: "new-view",
 			currentMasterId: this.masterId,
 			newMasterId: newMasterId,
 		});
@@ -196,7 +195,7 @@ export abstract class AbstractNoteView extends ItemView {
 		if (isWorkspaceRestore || !this.editor) {
 			// Attempt restoration even in the case of a new view.
 			logger.debug(
-				`Requesting content restoration from IndexedDB for masterId: ${this.masterId}`
+				`Requesting content restoration from IndexedDB for masterId: ${this.masterId}`,
 			);
 			if (this.editor) {
 				// If the editor is already ready, restore immediately.
@@ -213,7 +212,7 @@ export abstract class AbstractNoteView extends ItemView {
 
 	public override onPaneMenu(
 		menu: Menu,
-		source: "more-options" | "tab-header" | string
+		source: "more-options" | "tab-header" | string,
 	) {
 		this.addConvertToFileMenuItem(menu);
 		this.addClearContentMenuItem(menu);
@@ -238,10 +237,7 @@ export abstract class AbstractNoteView extends ItemView {
 	}
 
 	private handleInitializationError(error: unknown) {
-		logger.error(
-			"Sandbox Note: Failed to initialize inline editor.",
-			error
-		);
+		logger.error("Sandbox Note: Failed to initialize inline editor.", error);
 		this.contentEl.empty();
 		this.contentEl.createEl("div", {
 			text: "Error: Could not initialize editor. This might be due to an Obsidian update.",
@@ -256,17 +252,13 @@ export abstract class AbstractNoteView extends ItemView {
 		}
 
 		this.eventHandler.setupObsidianLeafListener(this.leaf.id, (cleanup) =>
-			this.register(cleanup)
+			this.register(cleanup),
 		);
 
 		this.eventHandler.setupDomEventListeners(
 			this.contentEl,
 			(el, type, callback) =>
-				this.registerDomEvent(
-					el,
-					type as keyof HTMLElementEventMap,
-					callback
-				)
+				this.registerDomEvent(el, type as keyof HTMLElementEventMap, callback),
 		);
 	}
 
@@ -277,7 +269,7 @@ export abstract class AbstractNoteView extends ItemView {
 				.setIcon("file-pen-line")
 				.onClick(async () => {
 					await extractToFileInteraction(this);
-				})
+				}),
 		);
 	}
 
@@ -289,7 +281,7 @@ export abstract class AbstractNoteView extends ItemView {
 				.setWarning(true)
 				.onClick(() => {
 					this.setContent("");
-				})
+				}),
 		);
 	}
 }
@@ -325,7 +317,7 @@ export class ViewStateManager {
 	buildState(
 		viewType: string,
 		masterId: string,
-		baseState: any
+		baseState: any,
 	): AbstractNoteViewState {
 		// Ensure the content property is excluded from baseState.
 		const { content, ...restOfStateData } = baseState.state || {};
@@ -349,7 +341,7 @@ export class SaveManager {
 
 	constructor(
 		private emitter: EventEmitter<AppEvents>,
-		private getView: () => any
+		private getView: () => any,
 	) {}
 
 	get isSaving(): boolean {
@@ -392,12 +384,12 @@ export class ViewEventHandler {
 	constructor(
 		private emitter: EventEmitter<AppEvents>,
 		private getEditor: () => Editor | undefined,
-		private getEditMode: () => MarkdownEditView | undefined
+		private getEditMode: () => MarkdownEditView | undefined,
 	) {}
 
 	setupObsidianLeafListener(
 		leafId: string,
-		registerCallback: (cleanup: () => void) => void
+		registerCallback: (cleanup: () => void) => void,
 	) {
 		const handler = (payload: any) => {
 			if (payload?.view?.leaf?.id === leafId) {
@@ -416,8 +408,8 @@ export class ViewEventHandler {
 		registerDomEvent: (
 			el: HTMLElement,
 			type: string,
-			callback: (e: Event) => void
-		) => void
+			callback: (e: Event) => void,
+		) => void,
 	) {
 		const editor = this.getEditor();
 		if (!editor) {
@@ -426,7 +418,7 @@ export class ViewEventHandler {
 		}
 
 		registerDomEvent(contentEl, "mousedown", (e) =>
-			handleClick(e as PointerEvent, editor)
+			handleClick(e as PointerEvent, editor),
 		);
 
 		registerDomEvent(contentEl, "contextmenu", (e) => {

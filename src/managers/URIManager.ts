@@ -15,7 +15,7 @@ export class URIManager implements IManager {
 			"create-hot-sandbox",
 			(params) => {
 				this.context.createAndOpenSandbox(params.content);
-			}
+			},
 		);
 	}
 	unload(): void {}

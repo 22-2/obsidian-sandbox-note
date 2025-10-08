@@ -17,12 +17,12 @@ export class DatabaseAPI extends Dexie {
 
 	async getSandbox(id: string): Promise<HotSandboxNoteData | undefined> {
 		const data = await this.sandboxes.get(id);
-		
+
 		if (data && !this.validateSandboxData(data)) {
 			logger.debug(`Invalid sandbox data detected for id: ${id}, skipping...`);
 			return undefined;
 		}
-		
+
 		return data;
 	}
 

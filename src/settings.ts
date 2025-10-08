@@ -45,7 +45,9 @@ export class SandboxNoteSettingTab extends PluginSettingTab {
 
 	private addDebugLoggingSetting(): void {
 		const settings = this.plugin.orchestrator.getSettings();
-		new Setting(this.containerEl).setHeading().setName(t("settings.sections.advanced"));
+		new Setting(this.containerEl)
+			.setHeading()
+			.setName(t("settings.sections.advanced"));
 
 		new Setting(this.containerEl)
 			.setName(t("settings.advanced.showDebugMessages.name"))
@@ -63,7 +65,9 @@ export class SandboxNoteSettingTab extends PluginSettingTab {
 	}
 
 	private addAppearanceSection(): void {
-		new Setting(this.containerEl).setHeading().setName(t("settings.sections.appearance"));
+		new Setting(this.containerEl)
+			.setHeading()
+			.setName(t("settings.sections.appearance"));
 
 		this.addFirstLineAsTitleSetting();
 	}
@@ -72,7 +76,9 @@ export class SandboxNoteSettingTab extends PluginSettingTab {
 	 * Groups all settings related to file saving, location, and conversion behavior.
 	 */
 	private addFileOperationSection(): void {
-		new Setting(this.containerEl).setHeading().setName(t("settings.sections.fileOperation"));
+		new Setting(this.containerEl)
+			.setHeading()
+			.setName(t("settings.sections.fileOperation"));
 
 		this.addUseObsidianDefaultLocationSetting();
 		this.addDefaultSavePathSetting();
@@ -101,17 +107,13 @@ export class SandboxNoteSettingTab extends PluginSettingTab {
 			.setDesc(t("settings.fileOperation.useObsidianDefaultLocation.desc"))
 			.addToggle((toggle) => {
 				toggle
-					.setValue(
-						settings["fileOperation.useObsidianDefaultLocation"]
-					)
+					.setValue(settings["fileOperation.useObsidianDefaultLocation"])
 					.onChange(async (value) => {
 						const newSettings: PluginSettings = {
 							...settings,
 							"fileOperation.useObsidianDefaultLocation": value,
 						};
-						await this.plugin.orchestrator.updateSettings(
-							newSettings
-						);
+						await this.plugin.orchestrator.updateSettings(newSettings);
 						this.toggleDefaultSavePathVisibility(value);
 					});
 			});
@@ -126,7 +128,9 @@ export class SandboxNoteSettingTab extends PluginSettingTab {
 			.addSearch((search) => {
 				search
 					.setValue(settings["fileOperation.defaultSavePath"])
-					.setPlaceholder(t("settings.fileOperation.customDefaultSaveLocation.placeholder"))
+					.setPlaceholder(
+						t("settings.fileOperation.customDefaultSaveLocation.placeholder"),
+					)
 					.onChange(async (value) => {
 						const normalizedValue =
 							value && !value.endsWith("/") ? `${value}/` : value;
@@ -145,7 +149,7 @@ export class SandboxNoteSettingTab extends PluginSettingTab {
 
 		// Initial state check
 		this.toggleDefaultSavePathVisibility(
-			settings["fileOperation.useObsidianDefaultLocation"]
+			settings["fileOperation.useObsidianDefaultLocation"],
 		);
 	}
 
@@ -193,9 +197,7 @@ export class SandboxNoteSettingTab extends PluginSettingTab {
 			.setDesc(t("settings.fileOperation.saveToVaultOnCommand.desc"))
 			.addToggle((toggle) => {
 				toggle
-					.setValue(
-						settings["fileOperation.saveToVaultOnCommandExecuted"]
-					)
+					.setValue(settings["fileOperation.saveToVaultOnCommandExecuted"])
 					.onChange(async (value) => {
 						await this.plugin.orchestrator.updateSettings({
 							...settings,

@@ -24,13 +24,11 @@ export class CodeMirrorExtensionManager implements IManager {
 
 	/** Register editor extension and set up event listeners */
 	public load() {
-		this.context.plugin.registerEditorExtension(
-			syncEditorPlugin as Extension
-		);
+		this.context.plugin.registerEditorExtension(syncEditorPlugin as Extension);
 
 		this.context.emitter.on(
 			"obsidian-active-leaf-changed",
-			this.handleActiveLeafChange
+			this.handleActiveLeafChange,
 		);
 	}
 
@@ -38,7 +36,7 @@ export class CodeMirrorExtensionManager implements IManager {
 	public unload() {
 		this.context.emitter.off(
 			"obsidian-active-leaf-changed",
-			this.handleActiveLeafChange
+			this.handleActiveLeafChange,
 		);
 	}
 
@@ -49,13 +47,13 @@ export class CodeMirrorExtensionManager implements IManager {
 		// FIXME
 		const editorPlugin = view.editor.cm.plugin(
 			// @ts-expect-error
-			syncEditorPlugin as unknown as ViewPlugin<SyncEditorPlugin, any>
+			syncEditorPlugin as unknown as ViewPlugin<SyncEditorPlugin, any>,
 		);
 		if (editorPlugin instanceof SyncEditorPlugin) {
 			editorPlugin.connectToPlugin(
 				this.context.plugin as SandboxNotePlugin,
 				view,
-				this.context.emitter
+				this.context.emitter,
 			);
 		}
 	}
@@ -74,7 +72,7 @@ export class CodeMirrorExtensionManager implements IManager {
 
 	/** Connects the editor plugin to the newly active view and syncs editor state. */
 	private handleActiveLeafChange = (
-		payload: AppEvents["obsidian-active-leaf-changed"]
+		payload: AppEvents["obsidian-active-leaf-changed"],
 	) => {
 		const { view } = payload;
 		if (view) {

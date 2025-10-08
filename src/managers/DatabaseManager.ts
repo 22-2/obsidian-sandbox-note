@@ -35,7 +35,7 @@ export class DatabaseManager implements IManager {
 
 	private sandboxGuard = (
 		view: AbstractNoteView,
-		callback: (view: HotSandboxNoteView & { masterId: string }) => void
+		callback: (view: HotSandboxNoteView & { masterId: string }) => void,
 	) => {
 		if (view instanceof HotSandboxNoteView && view.masterId) {
 			return callback(view! as HotSandboxNoteView & { masterId: string });
@@ -72,7 +72,7 @@ export class DatabaseManager implements IManager {
 
 	private async saveToDatabase(
 		masterId: string,
-		content: string
+		content: string,
 	): Promise<void> {
 		const note = this.context.cache.get(masterId);
 		if (!note) {
@@ -86,19 +86,19 @@ export class DatabaseManager implements IManager {
 			try {
 				await this.context.dbAPI.saveSandbox(updatedNote);
 				logger.debug(
-					`Saved hot note to database: ${masterId} (attempt ${attempt})`
+					`Saved hot note to database: ${masterId} (attempt ${attempt})`,
 				);
 				return;
 			} catch (error) {
 				if (attempt === MAX_RETRY_ATTEMPTS) {
 					logger.warn(
 						`Failed to save note to database after ${MAX_RETRY_ATTEMPTS} attempts: ${masterId}`,
-						error
+						error,
 					);
 					throw error;
 				}
 				logger.debug(
-					`Save attempt ${attempt} failed for ${masterId}, retrying...`
+					`Save attempt ${attempt} failed for ${masterId}, retrying...`,
 				);
 			}
 		}
@@ -113,10 +113,7 @@ export class DatabaseManager implements IManager {
 			logger.debug(`Deleted hot note from database: ${masterId}`);
 			// this.context.emitter.emit("sandbox-note-deleted", { noteId: masterId });
 		} catch (error) {
-			logger.error(
-				`Failed to delete note from database: ${masterId}`,
-				error
-			);
+			logger.error(`Failed to delete note from database: ${masterId}`, error);
 			// this.context.emitter.emit("sandbox-note-delete-failed", {
 			// 	noteId: masterId,
 			// 	error,
@@ -136,7 +133,7 @@ export class DatabaseManager implements IManager {
 					}
 				},
 				debounceMs,
-				true
+				true,
 			);
 			this.debouncedSaveFns.set(masterId, debouncer);
 		}
@@ -162,8 +159,8 @@ export class DatabaseManager implements IManager {
 				deletedCount++;
 				logger.debug(
 					`Deleted old dead sandbox: ${sandbox.id} (age: ${Math.floor(
-						(Date.now() - sandbox.mtime) / (24 * 60 * 60 * 1000)
-					)} days)`
+						(Date.now() - sandbox.mtime) / (24 * 60 * 60 * 1000),
+					)} days)`,
 				);
 			} else if (!view?.masterId) {
 				skippedCount++;
@@ -171,14 +168,14 @@ export class DatabaseManager implements IManager {
 					`Skipped dead sandbox (within retention period): ${
 						sandbox.id
 					} (age: ${Math.floor(
-						(Date.now() - sandbox.mtime) / (24 * 60 * 60 * 1000)
-					)} days)`
+						(Date.now() - sandbox.mtime) / (24 * 60 * 60 * 1000),
+					)} days)`,
 				);
 			}
 		}
 
 		logger.debug(
-			`Cleanup complete: deleted ${deletedCount} old sandboxes, skipped ${skippedCount} recent dead sandboxes`
+			`Cleanup complete: deleted ${deletedCount} old sandboxes, skipped ${skippedCount} recent dead sandboxes`,
 		);
 	}
 
@@ -189,7 +186,7 @@ export class DatabaseManager implements IManager {
 	debouncedSaveSandboxes(
 		masterId: string,
 		content: string,
-		debounceMs: number
+		debounceMs: number,
 	): void {
 		this.createDebouncedSave(masterId, debounceMs);
 		const debouncer = this.debouncedSaveFns.get(masterId)!;

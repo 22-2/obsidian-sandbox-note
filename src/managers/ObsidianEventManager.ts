@@ -18,24 +18,24 @@ type Context = {
 export class ObsidianEventManager implements IManager {
 	constructor(
 		private context: Context,
-		private emitter: EventEmitter<AppEvents>
+		private emitter: EventEmitter<AppEvents>,
 	) {}
 
 	/** Set up all workspace event listeners */
 	public load(): void {
 		this.context.workspaceEvents.onLayoutReady(() =>
-			this.emitter.emit("obsidian-layout-ready", undefined)
+			this.emitter.emit("obsidian-layout-ready", undefined),
 		);
 		this.context.workspaceEvents.on(
 			"active-leaf-change",
-			this.handleActiveLeafChange
+			this.handleActiveLeafChange,
 		);
 	}
 
 	public unload(): void {
 		this.context.workspaceEvents.off(
 			"active-leaf-change",
-			this.handleActiveLeafChange
+			this.handleActiveLeafChange,
 		);
 	}
 

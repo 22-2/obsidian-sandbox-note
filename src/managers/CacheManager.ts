@@ -21,20 +21,22 @@ export class CacheManager implements IManager {
 	constructor(private context: Context) {}
 
 	async load(): Promise<void> {
-		const allSandboxes = await this.context
-			.getDbManager()
-			.getAllSandboxes();
-		
-		logger.debug(`📦 Loading sandboxes from IndexedDB, total: ${allSandboxes.length}`);
-		
+		const allSandboxes = await this.context.getDbManager().getAllSandboxes();
+
+		logger.debug(
+			`📦 Loading sandboxes from IndexedDB, total: ${allSandboxes.length}`,
+		);
+
 		let loadedCount = 0;
 		let skippedCount = 0;
-		
+
 		allSandboxes.forEach((note) => {
 			// Validate sandbox data before loading into cache
 			if (this.validateSandboxData(note)) {
 				this.sandboxes.set(note.id, note);
-				logger.debug(`  ✅ Loaded: ${note.id}, content length: ${note.content.length}`);
+				logger.debug(
+					`  ✅ Loaded: ${note.id}, content length: ${note.content.length}`,
+				);
 				loadedCount++;
 			} else {
 				logger.warn(`  ❌ Skipping corrupted sandbox data: ${note.id}`);
@@ -43,7 +45,7 @@ export class CacheManager implements IManager {
 		});
 
 		logger.debug(
-			`📦 Loaded ${loadedCount} hot sandbox notes into memory${skippedCount > 0 ? `, skipped ${skippedCount} corrupted` : ""}.`
+			`📦 Loaded ${loadedCount} hot sandbox notes into memory${skippedCount > 0 ? `, skipped ${skippedCount} corrupted` : ""}.`,
 		);
 		// this.emitter.emit("notes-loaded", { count: allNotes.length });
 	}
@@ -69,7 +71,9 @@ export class CacheManager implements IManager {
 
 	getSandboxContent(masterId: string): string | undefined {
 		const sandbox = this.sandboxes.get(masterId);
-		logger.debug(`🔍 getSandboxContent(${masterId}): ${sandbox ? `found, length: ${sandbox.content.length}` : 'not found'}`);
+		logger.debug(
+			`🔍 getSandboxContent(${masterId}): ${sandbox ? `found, length: ${sandbox.content.length}` : "not found"}`,
+		);
 		return sandbox?.content;
 	}
 
