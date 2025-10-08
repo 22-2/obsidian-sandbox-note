@@ -44,7 +44,7 @@ export class PluginEventManager implements IManager {
 		emitter.on("editor-content-changed", this.handleEditorContentChanged);
 		emitter.on("connect-editor-plugin", this.handleConnectEditorPlugin);
 		emitter.on("settings-changed", this.handleSettingsChanged);
-		emitter.on("view-closed", this.handleViewClosed);
+		// emitter.on("view-closed", this.handleViewClosed);
 		emitter.on("obsidian-layout-ready", this.handleLayoutReady);
 		emitter.on("plugin-unload", this.handleUnload);
 	}
@@ -55,7 +55,7 @@ export class PluginEventManager implements IManager {
 		emitter.off("editor-content-changed", this.handleEditorContentChanged);
 		emitter.off("connect-editor-plugin", this.handleConnectEditorPlugin);
 		emitter.off("settings-changed", this.handleSettingsChanged);
-		emitter.off("view-closed", this.handleViewClosed);
+		// emitter.off("view-closed", this.handleViewClosed);
 		emitter.off("obsidian-layout-ready", this.handleLayoutReady);
 		emitter.off("plugin-unload", this.handleUnload);
 	}

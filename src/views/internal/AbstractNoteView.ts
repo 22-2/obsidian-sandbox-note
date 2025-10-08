@@ -37,7 +37,7 @@ export abstract class AbstractNoteView extends ItemView {
 	public wrapper: MagicalEditorWrapper;
 
 	// Prevent renaming prompts
-	// public navigation = true;
+	public navigation = true;
 
 	private stateManager: ViewStateManager;
 	private saveManager: SaveManager;
