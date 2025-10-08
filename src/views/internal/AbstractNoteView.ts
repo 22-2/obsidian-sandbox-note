@@ -1,4 +1,9 @@
 // src/views/internal/AbstractNoteView.ts (修正版)
+
+
+import log from "loglevel";
+import { nanoid } from "nanoid";
+import type { Editor, MarkdownEditView } from "obsidian";
 import {
 	ItemView,
 	Menu,
@@ -6,10 +11,8 @@ import {
 	type ViewStateResult,
 	WorkspaceLeaf,
 } from "obsidian";
-
-import log from "loglevel";
-import { nanoid } from "nanoid";
 import type { AppEvents } from "src/events/AppEvents";
+import { handleClick, handleContextMenu } from "src/helpers/clickHandler";
 import type { SettingsManager } from "src/managers/SettingsManager";
 import type { ViewManager } from "src/managers/ViewManager";
 import type { PluginSettings } from "src/settings";
@@ -18,9 +21,6 @@ import { HOT_SANDBOX_ID_PREFIX } from "src/utils/constants";
 import { MagicalEditorWrapper } from "./MagicalEditorWrapper";
 import type { AbstractNoteViewState, ObsidianViewState } from "./types";
 import { extractToFileInteraction } from "./utils";
-
-import type { Editor, MarkdownEditView } from "obsidian";
-import { handleClick, handleContextMenu } from "src/helpers/clickHandler";
 
 const logger = log.getLogger("AbstractNoteView");
 
@@ -37,6 +37,7 @@ export abstract class AbstractNoteView extends ItemView {
 	public scope: Scope;
 	public wrapper: MagicalEditorWrapper;
 
+	// Prevent renaming prompts
 	// public navigation = true;
 
 	private stateManager: ViewStateManager;
