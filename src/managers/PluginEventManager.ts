@@ -6,14 +6,14 @@ import type { IManager } from "src/managers/IManager";
 import type { EventEmitter } from "src/utils/EventEmitter";
 import { SAVE_DEBOUNCE_MS } from "src/utils/constants";
 import { HotSandboxNoteView } from "src/views/HotSandboxNoteView";
-import SandboxPlugin from "../main";
+import type SandboxPlugin from "../main";
 import type { CacheManager } from "./CacheManager";
 import type { SettingsManager } from "./SettingsManager";
 import type { ViewManager } from "./ViewManager";
 
 const logger = log.getLogger("PluginEventManager");
 
-type Context = {
+interface Context {
 	saveSandbox: DatabaseManager["debouncedSaveSandboxes"];
 	immediateSave: DatabaseManager["immediateSave"];
 	cache: CacheManager;
@@ -25,125 +25,144 @@ type Context = {
 	isLastHotView: ViewManager["isLastHotView"];
 	deleteFromAll: DatabaseManager["deleteFromAll"];
 	togglLoggersBy: SandboxPlugin["togglLoggersBy"];
-};
+}
 
 export class PluginEventManager implements IManager {
-	constructor(private context: Context) {}
+	constructor(private readonly context: Context) {}
 
 	load(): void {
-		this.context.emitter.on(
-			"editor-content-changed",
-			this.handleEditorContentChanged,
-		);
-		this.context.emitter.on(
-			"connect-editor-plugin",
-			this.handleConnectEditorPlugin,
-		);
-		this.context.emitter.on("settings-changed", this.handleSettingsChanged);
-		this.context.emitter.on("view-closed", this.handleViewClosed);
-		this.context.emitter.on("obsidian-layout-ready", this.handleLayoutReady);
-		this.context.emitter.on("plugin-unload", this.handleUnload);
-		// this.handleSettingsChanged({
-		// 	newSettings: this.context.settings.getSettings(),
-		// });
+		this.registerEventHandlers();
 	}
 
 	unload(): void {
-		this.context.emitter.off(
-			"editor-content-changed",
-			this.handleEditorContentChanged,
-		);
-		this.context.emitter.off(
-			"connect-editor-plugin",
-			this.handleConnectEditorPlugin,
-		);
-		this.context.emitter.off("settings-changed", this.handleSettingsChanged);
+		this.unregisterEventHandlers();
 	}
 
-	private handleLayoutReady = () => {
+	private registerEventHandlers(): void {
+		const { emitter } = this.context;
+
+		emitter.on("editor-content-changed", this.handleEditorContentChanged);
+		emitter.on("connect-editor-plugin", this.handleConnectEditorPlugin);
+		emitter.on("settings-changed", this.handleSettingsChanged);
+		emitter.on("view-closed", this.handleViewClosed);
+		emitter.on("obsidian-layout-ready", this.handleLayoutReady);
+		emitter.on("plugin-unload", this.handleUnload);
+	}
+
+	private unregisterEventHandlers(): void {
+		const { emitter } = this.context;
+
+		emitter.off("editor-content-changed", this.handleEditorContentChanged);
+		emitter.off("connect-editor-plugin", this.handleConnectEditorPlugin);
+		emitter.off("settings-changed", this.handleSettingsChanged);
+		emitter.off("view-closed", this.handleViewClosed);
+		emitter.off("obsidian-layout-ready", this.handleLayoutReady);
+		emitter.off("plugin-unload", this.handleUnload);
+	}
+
+	private handleLayoutReady = (): void => {
 		this.context.clearOldDeadSandboxes();
 	};
 
-	private handleViewClosed = async (payload: AppEvents["view-closed"]) => {
+	private handleViewClosed = async (
+		payload: AppEvents["view-closed"],
+	): Promise<void> => {
 		const { view, content } = payload;
-		if (view instanceof HotSandboxNoteView && view.masterId) {
-			// Save content immediately when view is closed
-			if (this.context.isLastHotView(view.masterId)) {
-				try {
-					logger.debug(
-						`💾 Immediate save on view close for: ${view.masterId}, content length: ${content.length}`,
-					);
-					await this.context.immediateSave(view.masterId, content);
-					logger.debug(`✅ Saved to IndexedDB for: ${view.masterId}`);
-				} catch (error) {
-					logger.warn(
-						`❌ Failed to save on view close: ${view.masterId}`,
-						error,
-					);
-				}
 
-				// Remove from in-memory cache only (keep in IndexedDB for 3-day retention)
-				this.context.cache.delete(view.masterId);
-				logger.debug(
-					`🗑️ Removed from cache (kept in IndexedDB): ${view.masterId}`,
-				);
-			}
+		if (!this.isHotSandboxView(view) || !view.masterId) {
+			return;
+		}
+
+		if (this.context.isLastHotView(view.masterId)) {
+			await this.saveAndCleanupView(view.masterId, content);
 		}
 	};
 
-	private handleUnload = async () => {
+	private async saveAndCleanupView(
+		masterId: string,
+		content: string,
+	): Promise<void> {
+		try {
+			logger.debug(
+				`💾 Immediate save on view close for: ${masterId}, content length: ${content.length}`,
+			);
+
+			await this.context.immediateSave(masterId, content);
+
+			logger.debug(`✅ Saved to IndexedDB for: ${masterId}`);
+		} catch (error) {
+			logger.warn(`❌ Failed to save on view close: ${masterId}`, error);
+		}
+
+		// Remove from in-memory cache only (keep in IndexedDB for 3-day retention)
+		this.context.cache.delete(masterId);
+		logger.debug(`🗑️ Removed from cache (kept in IndexedDB): ${masterId}`);
+	}
+
+	private handleUnload = async (): Promise<void> => {
 		const views = this.context.getAllViews();
 		logger.debug(`Plugin unload: immediately saving ${views.length} views`);
 
-		// Immediately save all views before unload
-		const savePromises = views
-			.filter((view) => view instanceof HotSandboxNoteView && view.masterId)
-			.map(async (view) => {
-				const hotView = view as HotSandboxNoteView;
-				try {
-					logger.debug(`Immediate save on unload for: ${hotView.masterId}`);
-					await this.context.immediateSave(
-						hotView.masterId!,
-						hotView.getContent(),
-					);
-					logger.debug(
-						`Immediate save completed on unload for: ${hotView.masterId}`,
-					);
-				} catch (error) {
-					logger.warn(
-						`Failed to immediately save on unload: ${hotView.masterId}`,
-						error,
-					);
-				}
-			});
-
+		const savePromises = this.createSavePromisesForViews(views);
 		await Promise.all(savePromises);
+
 		logger.debug("All immediate saves completed on unload");
 	};
 
+	private createSavePromisesForViews(views: unknown[]): Promise<void>[] {
+		return views
+			.filter(
+				(view): view is HotSandboxNoteView =>
+					this.isHotSandboxView(view) && Boolean(view.masterId),
+			)
+			.map((view) => this.saveViewOnUnload(view));
+	}
+
+	private async saveViewOnUnload(view: HotSandboxNoteView): Promise<void> {
+		const masterId = view.masterId!;
+
+		try {
+			logger.debug(`Immediate save on unload for: ${masterId}`);
+			await this.context.immediateSave(masterId, view.getContent());
+			logger.debug(`Immediate save completed on unload for: ${masterId}`);
+		} catch (error) {
+			logger.warn(`Failed to immediately save on unload: ${masterId}`, error);
+		}
+	}
+
 	private handleConnectEditorPlugin = (
 		payload: AppEvents["connect-editor-plugin"],
-	) => {
+	): void => {
 		this.context.connectEditorPluginToView(payload.view);
 	};
 
-	private handleSettingsChanged = (payload: AppEvents["settings-changed"]) => {
-		this.context.togglLoggersBy(
-			payload.newSettings["advanced.enableLogger"] ? "debug" : "warn",
-		);
+	private handleSettingsChanged = (
+		payload: AppEvents["settings-changed"],
+	): void => {
+		const logLevel = payload.newSettings["advanced.enableLogger"]
+			? "debug"
+			: "warn";
+		this.context.togglLoggersBy(logLevel);
 		logger.debug("Logger initialized");
 	};
 
 	private handleEditorContentChanged = (
 		payload: AppEvents["editor-content-changed"],
-	) => {
+	): void => {
 		const { content, sourceView } = payload;
 
-		if (sourceView instanceof HotSandboxNoteView && sourceView.masterId) {
-			// インメモリ状態を更新
-			this.context.cache.updateSandboxContent(sourceView.masterId, content);
-
-			this.context.saveSandbox(sourceView.masterId, content, SAVE_DEBOUNCE_MS);
+		if (!this.isHotSandboxView(sourceView) || !sourceView.masterId) {
+			return;
 		}
+
+		// Update in-memory state
+		this.context.cache.updateSandboxContent(sourceView.masterId, content);
+
+		// Schedule debounced save to IndexedDB
+		this.context.saveSandbox(sourceView.masterId, content, SAVE_DEBOUNCE_MS);
 	};
+
+	private isHotSandboxView(view: unknown): view is HotSandboxNoteView {
+		return view instanceof HotSandboxNoteView;
+	}
 }
