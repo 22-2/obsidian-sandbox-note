@@ -180,7 +180,7 @@ export class AppOrchestrator implements IManager {
 			getDisplayIndex: (masterId: string) => {
 				invariant(masterId, "masterId must not be null");
 				const groupCount = viewManager.indexOfMasterId(masterId);
-				logger.debug("groupCount", groupCount);
+				// logger.debug("groupCount", groupCount);
 				return groupCount === -1 ? 0 : groupCount + 1;
 			},
 			isLastHotView: (id: string) => viewManager.isLastHotView(id),

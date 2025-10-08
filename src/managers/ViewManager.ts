@@ -75,7 +75,7 @@ export class ViewManager implements IManager {
 			...new Set(allViews.map((v) => v.masterId).filter(Boolean)),
 		] as string[];
 		// そのリスト内でのインデックスを返す
-		logger.debug("uniqueMasterIds", uniqueMasterIds);
+		// logger.debug("uniqueMasterIds", uniqueMasterIds);
 		return uniqueMasterIds.findIndex((id) => id === masterId);
 	}
 
