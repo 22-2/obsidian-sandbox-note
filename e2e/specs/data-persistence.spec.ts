@@ -1,10 +1,10 @@
-import "../setup/log-setup";
+import "../obsidian-e2e/setup";
 
-import { DEFAULT_TEST_CONFIG, PLUGIN_ID } from "e2e/constants";
-import type { VaultOptions } from "e2e/helpers/types";
+import { DEFAULT_TEST_CONFIG, PLUGIN_ID } from "e2e/obsidian-e2e/constants";
+import type { VaultOptions } from "e2e/obsidian-e2e/helpers/types";
 import type SandboxNotePlugin from "../../src/main";
 import type { HotSandboxNoteData } from "../../src/types";
-import { expect, test } from "../base";
+import { expect, test } from "../obsidian-e2e";
 import { HotSandboxPage } from "./HotSandboxPage";
 
 const vaultOptions: VaultOptions = DEFAULT_TEST_CONFIG.vaultOptions;
@@ -57,7 +57,9 @@ test.describe("Data Persistence Scenarios", () => {
 
 			// Verify content persists after reload
 			const reloadedWindow = vault.electronApp.windows().at(-1)!;
-			const { getPluginHandleMap } = await import("../helpers/utils");
+			const { getPluginHandleMap } = await import(
+				"../obsidian-e2e/helpers/utils"
+			);
 			const reloadedHotSandbox = new HotSandboxPage(
 				reloadedWindow,
 				await getPluginHandleMap(

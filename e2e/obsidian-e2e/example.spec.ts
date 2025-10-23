@@ -1,17 +1,17 @@
 // E:\Desktop\coding\pub\obsidian-sandbox-note\e2e\specs\setup\example.spec.ts
+import "e2e/obsidian-e2e/setup";
 import { VIEW_TYPE_HOT_SANDBOX } from "src/utils/constants";
-import "../setup/log-setup";
 // ===================================================================
 // Example Test (example.test.mts)
 // ===================================================================
 
-import { expect, test } from "../base";
+import { expect, test } from "e2e/obsidian-e2e";
 import {
 	DEFAULT_TEST_CONFIG,
 	PLUGIN_ID,
 	SANDBOX_VAULT_NAME,
-} from "../constants";
-import { HotSandboxPage } from "../specs/HotSandboxPage";
+} from "e2e/obsidian-e2e/constants";
+import { HotSandboxPage } from "e2e/specs/HotSandboxPage";
 
 test.use({
 	vaultOptions: { ...DEFAULT_TEST_CONFIG, useSandbox: true },

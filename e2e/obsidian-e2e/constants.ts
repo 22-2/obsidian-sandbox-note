@@ -4,7 +4,7 @@ import { VIEW_TYPE_HOT_SANDBOX } from "src/utils/constants";
 import invariant from "tiny-invariant";
 import { fileURLToPath } from "url";
 import manifest from "../manifest.json" with { type: "json" };
-import type { TestPlugin } from "./helpers/types";
+import type { TestPlugin } from "./obsidian-e2e/helpers/types";
 import paths from "./paths.json" with { type: "json" };
 
 // --- Project Structure ---

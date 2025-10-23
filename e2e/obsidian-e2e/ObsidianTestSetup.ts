@@ -1,18 +1,27 @@
-import { type VaultOptions } from "e2e/helpers/types";
+import { expect } from "@playwright/test";
+import chalk from "chalk";
+import { type VaultOptions } from "e2e/obsidian-e2e/helpers/types";
+import type { WebContents } from "electron";
+import {
+	copyFileSync,
+	existsSync,
+	mkdirSync,
+	readdirSync,
+	rmSync,
+	statSync,
+	symlinkSync,
+	writeFileSync,
+} from "fs";
 import fs from "fs/promises";
 import log from "loglevel";
 import os from "os";
 import path from "path";
 import type { ElectronApplication, Page } from "playwright";
 import { _electron as electron } from "playwright/test";
-import { LAUNCH_OPTIONS, SANDBOX_VAULT_NAME } from "../constants";
-import type { TestContext, VaultPageTextContext } from "../helpers/types";
-import { getPluginHandleMap } from "../helpers/utils";
-import { IPCBridge } from "../helpers/IPCBridge";
-import { existsSync, rmSync, readdirSync, statSync, mkdirSync, copyFileSync, symlinkSync, writeFileSync } from "fs";
-import chalk from "chalk";
-import type { WebContents } from "electron";
-import { expect } from "@playwright/test";
+import { LAUNCH_OPTIONS, SANDBOX_VAULT_NAME } from "./constants";
+import { IPCBridge } from "./helpers/IPCBridge";
+import type { TestContext, VaultPageTextContext } from "./helpers/types";
+import { getPluginHandleMap } from "./helpers/utils";
 
 const logger = log.getLogger("ObsidianTestSetup");
 
@@ -30,17 +39,26 @@ export class ObsidianTestSetup {
 	// Launch & Cleanup
 	// ===================================================================
 
-	async launch(options: LaunchOptions = { useUTF8Encoding: true }): Promise<void> {
-		this.tempUserDataDir = await fs.mkdtemp(path.join(os.tmpdir(), "obsidian-e2e-"));
+	async launch(
+		options: LaunchOptions = { useUTF8Encoding: true }
+	): Promise<void> {
+		this.tempUserDataDir = await fs.mkdtemp(
+			path.join(os.tmpdir(), "obsidian-e2e-")
+		);
 		logger.debug(`Using temporary user data dir: ${this.tempUserDataDir}`);
 
 		const launchOptions = {
 			...LAUNCH_OPTIONS,
-			args: [...LAUNCH_OPTIONS.args, `--user-data-dir=${this.tempUserDataDir}`],
+			args: [
+				...LAUNCH_OPTIONS.args,
+				`--user-data-dir=${this.tempUserDataDir}`,
+			],
 			env: {
 				...process.env,
 				PLAYWRIGHT: "true",
-				USE_DEFAULT_FETCHER: options.useDefaultFetcher ? "true" : "false",
+				USE_DEFAULT_FETCHER: options.useDefaultFetcher
+					? "true"
+					: "false",
 				USE_UTF8_ENCODING: options.useUTF8Encoding ? "true" : "false",
 				CI: process.env.CI || "false",
 			},
@@ -70,11 +88,15 @@ export class ObsidianTestSetup {
 
 	async cleanup(): Promise<void> {
 		if (this.electronApp) {
-			await Promise.all(this.electronApp.windows().map((win) => win.close()));
+			await Promise.all(
+				this.electronApp.windows().map((win) => win.close())
+			);
 			await this.electronApp.close();
 		}
 		if (this.tempUserDataDir) {
-			logger.debug(`Removing temp user data dir: ${this.tempUserDataDir}`);
+			logger.debug(
+				`Removing temp user data dir: ${this.tempUserDataDir}`
+			);
 			await fs.rm(this.tempUserDataDir, { recursive: true, force: true });
 		}
 		logger.debug("[ObsidianTestSetup] cleaned All");
@@ -122,8 +144,12 @@ export class ObsidianTestSetup {
 			} else if (options.name) {
 				vaultPath = await this.getVaultPath(options.name);
 			} else {
-				logger.debug("options.name and options.path not specified, create temp dir");
-				vaultPath = await fs.mkdtemp(path.join(os.tmpdir(), "obsidian-e2e-"));
+				logger.debug(
+					"options.name and options.path not specified, create temp dir"
+				);
+				vaultPath = await fs.mkdtemp(
+					path.join(os.tmpdir(), "obsidian-e2e-")
+				);
 				logger.debug("temp dir created:", vaultPath);
 			}
 
@@ -131,15 +157,15 @@ export class ObsidianTestSetup {
 				rmSync(vaultPath, { recursive: true });
 			}
 
-			page = await this.executeActionAndWaitForNewWindow(
-				async () => {
-					const result = await this.ipc!.openVault(vaultPath, options.forceNewVault);
-					if (result !== true) {
-						throw new Error(`Failed to open vault: ${result}`);
-					}
-				},
-				this.waitForVaultReady
-			);
+			page = await this.executeActionAndWaitForNewWindow(async () => {
+				const result = await this.ipc!.openVault(
+					vaultPath,
+					options.forceNewVault
+				);
+				if (result !== true) {
+					throw new Error(`Failed to open vault: ${result}`);
+				}
+			}, this.waitForVaultReady);
 			logger.debug("Normal vault opened:", vaultPath);
 		}
 
@@ -150,17 +176,25 @@ export class ObsidianTestSetup {
 			logger.debug("Plugins installed.");
 
 			logger.debug("Enabling plugins...");
-			await this.enablePlugins(page, options.plugins.map((p) => p.pluginId));
+			await this.enablePlugins(
+				page,
+				options.plugins.map((p) => p.pluginId)
+			);
 			logger.debug("Plugins enabled.");
 
-			logger.debug(chalk.blue("Reloading vault to apply plugin changes..."));
+			logger.debug(
+				chalk.blue("Reloading vault to apply plugin changes...")
+			);
 			await page.reload();
 			await this.waitForVaultReady(page);
 			logger.debug(chalk.blue("Vault reloaded."));
 		}
 
 		const vaultName = await page.evaluate(() => app?.vault?.getName());
-		const pluginHandleMap = await getPluginHandleMap(page, options.plugins || []);
+		const pluginHandleMap = await getPluginHandleMap(
+			page,
+			options.plugins || []
+		);
 
 		return {
 			electronApp: this.electronApp,
@@ -170,7 +204,9 @@ export class ObsidianTestSetup {
 		};
 	}
 
-	async openSandbox(options: VaultOptions = {}): Promise<VaultPageTextContext> {
+	async openSandbox(
+		options: VaultOptions = {}
+	): Promise<VaultPageTextContext> {
 		return this.openVault({ ...options, useSandbox: true });
 	}
 
@@ -179,12 +215,9 @@ export class ObsidianTestSetup {
 			throw new Error("Setup not initialized. Call launch() first.");
 		}
 
-		const page = await this.executeActionAndWaitForNewWindow(
-			async () => {
-				await this.ipc!.openStarter();
-			},
-			this.waitForStarterReady
-		);
+		const page = await this.executeActionAndWaitForNewWindow(async () => {
+			await this.ipc!.openStarter();
+		}, this.waitForStarterReady);
 
 		await this.waitForStarterReady(page);
 		return {
@@ -197,7 +230,10 @@ export class ObsidianTestSetup {
 	// Plugin Management
 	// ===================================================================
 
-	private async installPlugins(vaultPath: string, plugins: Array<{ path: string; pluginId: string; useSymlink?: boolean }>): Promise<void> {
+	private async installPlugins(
+		vaultPath: string,
+		plugins: Array<{ path: string; pluginId: string; useSymlink?: boolean }>
+	): Promise<void> {
 		const obsidianDir = path.join(vaultPath, ".obsidian");
 		const pluginsDir = path.join(obsidianDir, "plugins");
 
@@ -226,13 +262,20 @@ export class ObsidianTestSetup {
 
 			if (useSymlink) {
 				if (existsSync(destDir)) {
-					logger.debug(`Destination already exists: ${destDir}, skipping symlink`);
+					logger.debug(
+						`Destination already exists: ${destDir}, skipping symlink`
+					);
 				} else {
 					try {
 						symlinkSync(pluginPath, destDir, "dir");
-						logger.debug(`Created symlink: ${pluginPath} -> ${destDir}`);
+						logger.debug(
+							`Created symlink: ${pluginPath} -> ${destDir}`
+						);
 					} catch (error) {
-						console.error(`Failed to create symlink for ${pluginId}:`, error);
+						console.error(
+							`Failed to create symlink for ${pluginId}:`,
+							error
+						);
 						continue;
 					}
 				}
@@ -260,12 +303,18 @@ export class ObsidianTestSetup {
 			logger.debug(`Installed plugin: ${pluginId}`);
 		}
 
-		const pluginsJsonPath = path.join(obsidianDir, "community-plugins.json");
+		const pluginsJsonPath = path.join(
+			obsidianDir,
+			"community-plugins.json"
+		);
 		writeFileSync(pluginsJsonPath, JSON.stringify(installedIds));
 		logger.debug(`Installed plugins: ${installedIds.join(", ")}`);
 	}
 
-	private async enablePlugins(page: Page, pluginIds: string[]): Promise<void> {
+	private async enablePlugins(
+		page: Page,
+		pluginIds: string[]
+	): Promise<void> {
 		await this.disableRestrictedMode(page);
 
 		const enabledIds = await page.evaluate(async (ids) => {
@@ -311,13 +360,21 @@ export class ObsidianTestSetup {
 
 		const getButtonText = () =>
 			page.evaluate(() => {
-				const button = (window as any).app.setting.activeTab?.setting?.contentEl?.querySelector("button.mod-cta") as HTMLElement | null;
+				const button = (
+					window as any
+				).app.setting.activeTab?.setting?.contentEl?.querySelector(
+					"button.mod-cta"
+				) as HTMLElement | null;
 				return button?.textContent?.trim() || null;
 			});
 
 		const clickButton = () =>
 			page.evaluate(() => {
-				const button = (window as any).app.setting.activeTab?.setting?.contentEl?.querySelector("button.mod-cta") as HTMLElement | null;
+				const button = (
+					window as any
+				).app.setting.activeTab?.setting?.contentEl?.querySelector(
+					"button.mod-cta"
+				) as HTMLElement | null;
 				button?.click();
 			});
 
@@ -387,7 +444,9 @@ export class ObsidianTestSetup {
 		}
 
 		const currentWindows = this.electronApp.windows();
-		const windowPromise = this.electronApp.waitForEvent("window", { timeout: 10000 });
+		const windowPromise = this.electronApp.waitForEvent("window", {
+			timeout: 10000,
+		});
 
 		await action();
 
@@ -396,7 +455,9 @@ export class ObsidianTestSetup {
 
 		for (const window of currentWindows) {
 			if (window !== newPage && !window.isClosed()) {
-				logger.debug(chalk.yellow(`Closing old window: ${await window.title()}`));
+				logger.debug(
+					chalk.yellow(`Closing old window: ${await window.title()}`)
+				);
 				await window.close();
 			}
 		}
@@ -423,7 +484,9 @@ export class ObsidianTestSetup {
 			async () => {
 				if ((window as any).app?.workspace?.onLayoutReady) {
 					return await new Promise<void>((resolve) => {
-						return app.workspace.onLayoutReady(() => resolve(undefined));
+						return app.workspace.onLayoutReady(() =>
+							resolve(undefined)
+						);
 					});
 				}
 			},
@@ -432,7 +495,9 @@ export class ObsidianTestSetup {
 	}
 
 	async waitForStarterReady(page: Page): Promise<void> {
-		await page.waitForSelector(".mod-change-language", { state: "visible" });
+		await page.waitForSelector(".mod-change-language", {
+			state: "visible",
+		});
 	}
 
 	waitForPage(page: Page): Promise<void> {
@@ -450,9 +515,14 @@ export class ObsidianTestSetup {
 	private async clearData(): Promise<void> {
 		if (!this.electronApp) return;
 
-		const userDataDir = await this.electronApp.evaluate(({ app }) => app.getPath("userData"));
+		const userDataDir = await this.electronApp.evaluate(({ app }) =>
+			app.getPath("userData")
+		);
 
-		[path.join(userDataDir, "obsidian.json"), path.join(userDataDir, SANDBOX_VAULT_NAME)].forEach((p) => {
+		[
+			path.join(userDataDir, "obsidian.json"),
+			path.join(userDataDir, SANDBOX_VAULT_NAME),
+		].forEach((p) => {
 			logger.debug("delete", p);
 			rmSync(p, { force: true, recursive: true });
 		});
@@ -461,7 +531,10 @@ export class ObsidianTestSetup {
 		if (win) {
 			logger.log(chalk.magenta("clearing..."));
 			const success = await win.evaluate(async () => {
-				const webContents = (window as any).electron.remote.BrowserWindow.getFocusedWindow()?.webContents as WebContents;
+				const webContents = (
+					window as any
+				).electron.remote.BrowserWindow.getFocusedWindow()
+					?.webContents as WebContents;
 				if (!webContents) return false;
 
 				webContents.session.flushStorageData();
@@ -500,6 +573,10 @@ export class ObsidianTestSetup {
 			return path.join(userDataDir, name);
 		}
 
-		return path.join(process.env.USERPROFILE || process.env.HOME || "", "ObsidianVaults", name);
+		return path.join(
+			process.env.USERPROFILE || process.env.HOME || "",
+			"ObsidianVaults",
+			name
+		);
 	}
 }

@@ -1,10 +1,13 @@
-import "../setup/log-setup";
+import "e2e/obsidian-e2e/setup";
 
-import { CMD_ID_TOGGLE_SOURCE, DEFAULT_TEST_CONFIG } from "e2e/constants";
+import { expect, test } from "e2e/obsidian-e2e";
+import {
+	CMD_ID_TOGGLE_SOURCE,
+	DEFAULT_TEST_CONFIG,
+	PLUGIN_ID,
+} from "e2e/obsidian-e2e/constants";
 import SandboxNotePlugin from "../../src/main";
 import { VIEW_TYPE_HOT_SANDBOX } from "../../src/utils/constants";
-import { expect, test } from "../base";
-import { PLUGIN_ID } from "../constants";
 import { HotSandboxPage } from "./HotSandboxPage";
 
 // --- Test Configuration ---
@@ -287,7 +290,9 @@ test.describe("HotSandboxNoteView Main Features", () => {
 
 			// Verify content persists
 			const reloadedWindow = vault.electronApp.windows().at(-1)!;
-			const { getPluginHandleMap } = await import("../helpers/utils");
+			const { getPluginHandleMap } = await import(
+				"../obsidian-e2e/helpers/utils"
+			);
 			const reloadedHotSandbox = new HotSandboxPage(
 				reloadedWindow,
 				await getPluginHandleMap(

@@ -1,7 +1,7 @@
 import { test as base } from "@playwright/test";
 import log from "loglevel";
+import { ObsidianTestSetup } from "./ObsidianTestSetup";
 import type { TestFixtures, WorkerFixtures } from "./helpers/types";
-import { ObsidianTestSetup } from "./setup/ObsidianTestSetup";
 
 const logger = log.getLogger("obsidianSetup");
 
@@ -15,15 +15,23 @@ function setupBrowserConsoleLogging(window: any): void {
 		const text = msg.text();
 
 		if (text.length > 500) {
-			console.log(`🖥️ BROWSER [${type.toUpperCase()}]: [長文のため省略: ${text.length}文字]`);
+			console.log(
+				`🖥️ BROWSER [${type.toUpperCase()}]: [長文のため省略: ${
+					text.length
+				}文字]`
+			);
 			return;
 		}
 
-		console.log(`🖥️ BROWSER [${type.toUpperCase()}]: ${text.substring(0, 100)}`);
+		console.log(
+			`🖥️ BROWSER [${type.toUpperCase()}]: ${text.substring(0, 100)}`
+		);
 
 		const location = msg.location();
 		if (location.url && location.url !== "about:blank") {
-			console.log(`   📍 Location: ${location.url}:${location.lineNumber}:${location.columnNumber}`);
+			console.log(
+				`   📍 Location: ${location.url}:${location.lineNumber}:${location.columnNumber}`
+			);
 		}
 	});
 
@@ -44,7 +52,9 @@ function setupBrowserConsoleLogging(window: any): void {
 
 	window.on("response", (response: any) => {
 		if (!response.ok()) {
-			console.log(`🖥️ HTTP ERROR: ${response.status()} ${response.statusText()} - ${response.url()}`);
+			console.log(
+				`🖥️ HTTP ERROR: ${response.status()} ${response.statusText()} - ${response.url()}`
+			);
 		}
 	});
 }
@@ -70,7 +80,9 @@ function handleTestError(testInfo: any): void {
 
 		if (testInfo.error.stack) {
 			const firstNewlineIndex = testInfo.error.stack.indexOf("\n");
-			const stackWithoutMessage = testInfo.error.stack.substring(firstNewlineIndex + 1);
+			const stackWithoutMessage = testInfo.error.stack.substring(
+				firstNewlineIndex + 1
+			);
 			console.error(stackWithoutMessage);
 		}
 
@@ -86,7 +98,10 @@ function handleTestError(testInfo: any): void {
 // Vault Setup Helpers
 // ===================================================================
 
-async function setupVault(obsidianSetup: ObsidianTestSetup, vaultOptions: any): Promise<any> {
+async function setupVault(
+	obsidianSetup: ObsidianTestSetup,
+	vaultOptions: any
+): Promise<any> {
 	logger.debug("vaultOptions", vaultOptions);
 
 	const context = vaultOptions.useSandbox
@@ -99,7 +114,9 @@ async function setupVault(obsidianSetup: ObsidianTestSetup, vaultOptions: any): 
 	}
 
 	// Remove all notices
-	const notices = await context.window.locator(".notice-container .notice").all();
+	const notices = await context.window
+		.locator(".notice-container .notice")
+		.all();
 	logger.debug("remove all notices");
 	await Promise.all(notices.map((notice: any) => notice.click()));
 

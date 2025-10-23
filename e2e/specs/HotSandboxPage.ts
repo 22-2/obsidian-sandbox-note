@@ -4,13 +4,13 @@ import {
 	DATAT_TYPE_MARKDOWN,
 	DATA_TYPE_HOT_SANDBOX,
 	PLUGIN_ID,
-} from "e2e/constants";
+} from "e2e/obsidian-e2e/constants";
+import { CustomViewPageObject } from "e2e/obsidian-e2e/helpers/ObsidianPageObject";
+import type { VaultPageTextContext } from "e2e/obsidian-e2e/helpers/types";
 import type { Page } from "playwright";
 import { expect } from "playwright/test";
 import type SandboxNotePlugin from "src/main";
 import { VIEW_TYPE_HOT_SANDBOX } from "../../src/utils/constants";
-import { CustomViewPageObject } from "../helpers/ObsidianPageObject";
-import type { VaultPageTextContext } from "../helpers/types";
 
 /**
  * Hot Sandbox専用のPage Object

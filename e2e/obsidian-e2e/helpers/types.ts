@@ -1,4 +1,4 @@
-import type { ObsidianTestSetup } from "e2e/setup/ObsidianTestSetup";
+import type { ObsidianTestSetup } from "e2e/obsidian-e2e/ObsidianTestSetup";
 import type { ElectronApplication, JSHandle, Page } from "playwright";
 
 // Minimal Plugin interface to avoid importing from obsidian package
