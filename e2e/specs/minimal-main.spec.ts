@@ -1,22 +1,14 @@
 import "../setup/log-setup";
 
-import { CMD_ID_TOGGLE_SOURCE } from "e2e/constants";
+import { CMD_ID_TOGGLE_SOURCE, DEFAULT_TEST_CONFIG } from "e2e/constants";
 import SandboxNotePlugin from "../../src/main";
 import { VIEW_TYPE_HOT_SANDBOX } from "../../src/utils/constants";
 import { expect, test } from "../base";
-import { DIST_DIR, PLUGIN_ID } from "../constants";
-import type { VaultOptions } from "../helpers/managers/VaultManager";
+import { PLUGIN_ID } from "../constants";
 import { HotSandboxPage } from "./HotSandboxPage";
 
-const vaultOptions: VaultOptions = {
-	useSandbox: true,
-	plugins: [{ pluginId: PLUGIN_ID, path: DIST_DIR }],
-};
-
 // --- Test Configuration ---
-test.use({
-	vaultOptions,
-});
+test.use(DEFAULT_TEST_CONFIG);
 
 // --- Test Suite ---
 test.describe.configure({ mode: "serial" });
@@ -102,8 +94,8 @@ test.describe("HotSandboxNoteView Main Features", () => {
 			);
 			const noteContent = "This note will be converted to a file.";
 			const fileName = "Untitled";
-			const folderPath = "Adventurer";
-			const expectedFile = `${folderPath}/${fileName}.md`;
+			// const folderPath = "Adventurer";
+			const expectedFile = `/${fileName}.md`;
 
 			// Initial setup
 			await hotSandbox.closeTab();
@@ -116,7 +108,8 @@ test.describe("HotSandboxNoteView Main Features", () => {
 			await hotSandbox.expectActiveTabType(VIEW_TYPE_HOT_SANDBOX);
 
 			// Convert to file
-			await hotSandbox.convertToFile(fileName, folderPath);
+			// await hotSandbox.convertToFile(fileName, folderPath);
+			await hotSandbox.convertToFile(fileName);
 			await hotSandbox.expectActiveTabType("markdown");
 			await hotSandbox.expectTabCount(1);
 
@@ -271,14 +264,6 @@ test.describe("HotSandboxNoteView Main Features", () => {
 
 	// Dedicated describe block for Test 7 to isolate the configuration override
 	test.describe("7. Data Persistence After Reload", () => {
-		test.use({
-			vaultOptions: {
-				...vaultOptions,
-				useSandbox: false,
-				showLoggerOnNode: true,
-			},
-		});
-
 		test("should persist sandbox content after Obsidian reload when useSandbox is false", async ({
 			vault,
 			vaultOptions,

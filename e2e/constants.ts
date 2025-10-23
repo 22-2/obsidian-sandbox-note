@@ -67,7 +67,7 @@ export const DATA_TYPE_HOT_SANDBOX = VIEW_TYPE_HOT_SANDBOX;
 
 export const DEFAULT_TEST_CONFIG = {
 	vaultOptions: {
-		useSandbox: true,
+		useSandbox: false,
 		showLoggerOnNode: true,
 		plugins: [
 			{

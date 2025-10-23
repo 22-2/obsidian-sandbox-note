@@ -1,11 +1,11 @@
 import "../setup/log-setup";
 
 import { PLUGIN_ID } from "e2e/constants";
+import type { VaultOptions } from "e2e/helpers/types";
 import type SandboxNotePlugin from "../../src/main";
 import type { HotSandboxNoteData } from "../../src/types";
 import { expect, test } from "../base";
 import { DIST_DIR } from "../constants";
-import type { VaultOptions } from "../helpers/managers/VaultManager";
 import { HotSandboxPage } from "./HotSandboxPage";
 
 const vaultOptions: VaultOptions = {
@@ -45,15 +45,13 @@ test.describe("Data Persistence Scenarios", () => {
 				[PLUGIN_ID]
 			);
 
-			const savedData = await pluginHandle.evaluate(
-				async (plugin) => {
-					const dbManager = plugin.orchestrator.get("dbManager");
-					const allSandboxes = await dbManager.getAllSandboxes();
-					const data = allSandboxes[0];
-					// Return only necessary fields to avoid console spam
-					return data ? { content: data.content, id: data.id } : null;
-				}
-			);
+			const savedData = await pluginHandle.evaluate(async (plugin) => {
+				const dbManager = plugin.orchestrator.get("dbManager");
+				const allSandboxes = await dbManager.getAllSandboxes();
+				const data = allSandboxes[0];
+				// Return only necessary fields to avoid console spam
+				return data ? { content: data.content, id: data.id } : null;
+			});
 
 			expect(savedData).toBeDefined();
 			expect(savedData?.content).toBe(testContent);
@@ -74,10 +72,10 @@ test.describe("Data Persistence Scenarios", () => {
 			);
 
 			await expect(reloadedHotSandbox.activeSandboxView).toBeVisible();
-			
+
 			// Wait for view to fully restore
 			await vault.window.waitForTimeout(500);
-			
+
 			// The content should be restored from Obsidian's workspace state
 			// which includes the content that was saved before reload
 			await expect(reloadedHotSandbox.activeEditor).toHaveText(
@@ -119,20 +117,24 @@ test.describe("Data Persistence Scenarios", () => {
 			// Close the view (should trigger immediate save)
 			// Since this is the last view with content, a confirmation dialog will appear
 			await hotSandbox.closeTab();
-			
+
 			// Wait for confirmation dialog
 			await vault.window.waitForTimeout(300);
-			
+
 			// Check if confirmation dialog appeared
-			const confirmDialog = vault.window.locator('.modal:has-text("Delete Sandbox")');
-			const dialogVisible = await confirmDialog.isVisible().catch(() => false);
-			
+			const confirmDialog = vault.window.locator(
+				'.modal:has-text("Delete Sandbox")'
+			);
+			const dialogVisible = await confirmDialog
+				.isVisible()
+				.catch(() => false);
+
 			if (dialogVisible) {
 				// Confirm deletion
 				await vault.window.getByText("Yes", { exact: true }).click();
 				await vault.window.waitForTimeout(300);
 			}
-			
+
 			await hotSandbox.expectActiveTabType("empty");
 			await hotSandbox.expectTabCount(1);
 		});
@@ -167,9 +169,13 @@ test.describe("Data Persistence Scenarios", () => {
 					};
 					const dbManager = plugin.orchestrator.get("dbManager");
 					await dbManager.getSandboxByMasterId(masterId); // Ensure cache is initialized
-					const cacheManager = plugin.orchestrator.get("cacheManager");
+					const cacheManager =
+						plugin.orchestrator.get("cacheManager");
 					cacheManager.registerNewSandbox(masterId);
-					cacheManager.updateSandboxContent(masterId, content as string);
+					cacheManager.updateSandboxContent(
+						masterId,
+						content as string
+					);
 					const note = cacheManager.get(masterId);
 					if (note) {
 						note.mtime = Date.now() - 4 * 24 * 60 * 60 * 1000;
@@ -193,9 +199,13 @@ test.describe("Data Persistence Scenarios", () => {
 						mtime: Date.now() - 2 * 24 * 60 * 60 * 1000, // 2 days ago
 					};
 					const dbManager = plugin.orchestrator.get("dbManager");
-					const cacheManager = plugin.orchestrator.get("cacheManager");
+					const cacheManager =
+						plugin.orchestrator.get("cacheManager");
 					cacheManager.registerNewSandbox(masterId);
-					cacheManager.updateSandboxContent(masterId, content as string);
+					cacheManager.updateSandboxContent(
+						masterId,
+						content as string
+					);
 					const note = cacheManager.get(masterId);
 					if (note) {
 						note.mtime = Date.now() - 2 * 24 * 60 * 60 * 1000;
@@ -213,7 +223,9 @@ test.describe("Data Persistence Scenarios", () => {
 					const dbManager = plugin.orchestrator.get("dbManager");
 					const dbAPI = (dbManager as any).context.dbAPI;
 					const oldData = await dbAPI.getSandbox(oldId as string);
-					const recentData = await dbAPI.getSandbox(recentId as string);
+					const recentData = await dbAPI.getSandbox(
+						recentId as string
+					);
 					return {
 						oldExists: !!oldData,
 						recentExists: !!recentData,
@@ -237,7 +249,9 @@ test.describe("Data Persistence Scenarios", () => {
 					const dbManager = plugin.orchestrator.get("dbManager");
 					const dbAPI = (dbManager as any).context.dbAPI;
 					const oldData = await dbAPI.getSandbox(oldId as string);
-					const recentData = await dbAPI.getSandbox(recentId as string);
+					const recentData = await dbAPI.getSandbox(
+						recentId as string
+					);
 					return {
 						oldExists: !!oldData,
 						recentExists: !!recentData,
@@ -250,10 +264,13 @@ test.describe("Data Persistence Scenarios", () => {
 			expect(afterCleanup.recentExists).toBe(true); // Recent data should be retained
 
 			// Cleanup test data
-			await pluginHandle.evaluate(async (plugin, [recentId]) => {
-				const dbManager = plugin.orchestrator.get("dbManager");
-				await dbManager.deleteFromAll(recentId as string);
-			}, [recentMasterId]);
+			await pluginHandle.evaluate(
+				async (plugin, [recentId]) => {
+					const dbManager = plugin.orchestrator.get("dbManager");
+					await dbManager.deleteFromAll(recentId as string);
+				},
+				[recentMasterId]
+			);
 		});
 	});
 
@@ -273,17 +290,20 @@ test.describe("Data Persistence Scenarios", () => {
 
 			// Insert corrupted data directly into database
 			const corruptedId = `corrupted-${Date.now()}`;
-			await pluginHandle.evaluate(async (plugin, [id]) => {
-				// Insert data with invalid structure
-				const corruptedData = {
-					id: id as string,
-					content: 12345, // Invalid: should be string
-					mtime: "invalid", // Invalid: should be number
-				};
-				const dbManager = plugin.orchestrator.get("dbManager");
-				const dbAPI = (dbManager as any).context.dbAPI;
-				await dbAPI.sandboxes.put(corruptedData as any);
-			}, [corruptedId]);
+			await pluginHandle.evaluate(
+				async (plugin, [id]) => {
+					// Insert data with invalid structure
+					const corruptedData = {
+						id: id as string,
+						content: 12345, // Invalid: should be string
+						mtime: "invalid", // Invalid: should be number
+					};
+					const dbManager = plugin.orchestrator.get("dbManager");
+					const dbAPI = (dbManager as any).context.dbAPI;
+					await dbAPI.sandboxes.put(corruptedData as any);
+				},
+				[corruptedId]
+			);
 
 			// Try to retrieve corrupted data
 			const retrievedData = await pluginHandle.evaluate(
@@ -312,9 +332,13 @@ test.describe("Data Persistence Scenarios", () => {
 				async (plugin, [content]) => {
 					const dbManager = plugin.orchestrator.get("dbManager");
 					const allSandboxes = await dbManager.getAllSandboxes();
-					const found = allSandboxes.find((s: HotSandboxNoteData) => s.content === content);
+					const found = allSandboxes.find(
+						(s: HotSandboxNoteData) => s.content === content
+					);
 					// Return only necessary fields to avoid console spam
-					return found ? { content: found.content, id: found.id } : null;
+					return found
+						? { content: found.content, id: found.id }
+						: null;
 				},
 				[validContent]
 			);
@@ -323,11 +347,14 @@ test.describe("Data Persistence Scenarios", () => {
 			expect(validData?.content).toBe(validContent);
 
 			// Cleanup
-			await pluginHandle.evaluate(async (plugin, [id]) => {
-				const dbManager = plugin.orchestrator.get("dbManager");
-				const dbAPI = (dbManager as any).context.dbAPI;
-				await dbAPI.deleteSandbox(id as string);
-			}, [corruptedId]);
+			await pluginHandle.evaluate(
+				async (plugin, [id]) => {
+					const dbManager = plugin.orchestrator.get("dbManager");
+					const dbAPI = (dbManager as any).context.dbAPI;
+					await dbAPI.deleteSandbox(id as string);
+				},
+				[corruptedId]
+			);
 		});
 
 		test("should validate data structure on retrieval", async ({
