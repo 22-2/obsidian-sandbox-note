@@ -1,5 +1,13 @@
+/**
+ * Default index for obsidian-e2e when used in a project context
+ * 
+ * This file provides backward compatibility and convenience exports
+ * for projects using this library within their e2e directory.
+ */
+
 import { test as base } from "@playwright/test";
 import log from "loglevel";
+import { getResolvedPaths } from "./constants";
 import { ObsidianTestSetup } from "./ObsidianTestSetup";
 import type { TestFixtures, WorkerFixtures } from "./helpers/types";
 
@@ -137,7 +145,8 @@ export const test = base.extend<TestFixtures, WorkerFixtures>({
 	},
 
 	obsidianSetup: async ({}, use, testInfo) => {
-		const setup = new ObsidianTestSetup();
+		const paths = getResolvedPaths();
+		const setup = new ObsidianTestSetup(paths);
 
 		try {
 			logger.debug("launch");
@@ -171,3 +180,23 @@ export const test = base.extend<TestFixtures, WorkerFixtures>({
 });
 
 export { expect } from "@playwright/test";
+
+// Re-export main utilities from the library
+export {
+	type ObsidianE2EConfig,
+	type ResolvedPaths,
+	resolveConfig,
+	createLaunchOptions,
+	createTestSetup,
+} from "./main";
+
+export { ObsidianTestSetup } from "./ObsidianTestSetup";
+
+export {
+	type TestContext,
+	type VaultPageTextContext,
+	type VaultOptions,
+	type TestPlugin,
+	type TestFixtures,
+	type WorkerFixtures,
+} from "./helpers/types";

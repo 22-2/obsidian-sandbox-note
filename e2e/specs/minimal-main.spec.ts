@@ -11,7 +11,9 @@ import { VIEW_TYPE_HOT_SANDBOX } from "../../src/utils/constants";
 import { HotSandboxPage } from "./HotSandboxPage";
 
 // --- Test Configuration ---
-test.use(DEFAULT_TEST_CONFIG);
+test.use({
+	vaultOptions: DEFAULT_TEST_CONFIG,
+});
 
 // --- Test Suite ---
 test.describe.configure({ mode: "serial" });

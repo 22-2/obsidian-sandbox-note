@@ -18,12 +18,15 @@ import os from "os";
 import path from "path";
 import type { ElectronApplication, Page } from "playwright";
 import { _electron as electron } from "playwright/test";
-import { LAUNCH_OPTIONS, SANDBOX_VAULT_NAME } from "./constants";
+import type { ResolvedPaths } from "./config";
+import { createLaunchOptions } from "./config";
 import { IPCBridge } from "./helpers/IPCBridge";
 import type { TestContext, VaultPageTextContext } from "./helpers/types";
 import { getPluginHandleMap } from "./helpers/utils";
 
 const logger = log.getLogger("ObsidianTestSetup");
+
+const SANDBOX_VAULT_NAME = "Obsidian Sandbox";
 
 interface LaunchOptions {
 	useDefaultFetcher?: boolean;
@@ -34,6 +37,11 @@ export class ObsidianTestSetup {
 	private electronApp?: ElectronApplication;
 	private tempUserDataDir?: string;
 	private ipc?: IPCBridge;
+	private paths: ResolvedPaths;
+
+	constructor(paths: ResolvedPaths) {
+		this.paths = paths;
+	}
 
 	// ===================================================================
 	// Launch & Cleanup
@@ -47,14 +55,15 @@ export class ObsidianTestSetup {
 		);
 		logger.debug(`Using temporary user data dir: ${this.tempUserDataDir}`);
 
+		const baseLaunchOptions = createLaunchOptions(this.paths);
 		const launchOptions = {
-			...LAUNCH_OPTIONS,
+			...baseLaunchOptions,
 			args: [
-				...LAUNCH_OPTIONS.args,
+				...baseLaunchOptions.args,
 				`--user-data-dir=${this.tempUserDataDir}`,
 			],
 			env: {
-				...process.env,
+				...baseLaunchOptions.env,
 				PLAYWRIGHT: "true",
 				USE_DEFAULT_FETCHER: options.useDefaultFetcher
 					? "true"
@@ -191,6 +200,7 @@ export class ObsidianTestSetup {
 		}
 
 		const vaultName = await page.evaluate(() => app?.vault?.getName());
+		logger.debug("Vault name:", vaultName);
 		const pluginHandleMap = await getPluginHandleMap(
 			page,
 			options.plugins || []
@@ -201,6 +211,7 @@ export class ObsidianTestSetup {
 			window: page,
 			pluginHandleMap,
 			vaultName,
+			paths: this.paths,
 		};
 	}
 
@@ -578,5 +589,12 @@ export class ObsidianTestSetup {
 			"ObsidianVaults",
 			name
 		);
+	}
+
+	/**
+	 * Get the resolved paths configuration
+	 */
+	getPaths(): ResolvedPaths {
+		return this.paths;
 	}
 }

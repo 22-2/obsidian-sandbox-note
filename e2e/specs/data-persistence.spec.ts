@@ -1,17 +1,14 @@
 import "../obsidian-e2e/setup";
 
 import { DEFAULT_TEST_CONFIG, PLUGIN_ID } from "e2e/obsidian-e2e/constants";
-import type { VaultOptions } from "e2e/obsidian-e2e/helpers/types";
 import type SandboxNotePlugin from "../../src/main";
 import type { HotSandboxNoteData } from "../../src/types";
 import { expect, test } from "../obsidian-e2e";
 import { HotSandboxPage } from "./HotSandboxPage";
 
-const vaultOptions: VaultOptions = DEFAULT_TEST_CONFIG.vaultOptions;
-
 // --- Test Configuration ---
 test.use({
-	vaultOptions,
+	vaultOptions: DEFAULT_TEST_CONFIG,
 });
 
 // --- Test Suite ---
@@ -64,7 +61,7 @@ test.describe("Data Persistence Scenarios", () => {
 				reloadedWindow,
 				await getPluginHandleMap(
 					reloadedWindow,
-					vaultOptions.plugins || []
+					DEFAULT_TEST_CONFIG.plugins || []
 				)
 			);
 

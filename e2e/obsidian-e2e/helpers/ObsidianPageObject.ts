@@ -1,6 +1,6 @@
-import { CMD_ID_CLOSE_TAB, CMD_ID_UNDO_CLOSE_TAB } from "e2e/constants";
 import type { JSHandle, Locator, Page } from "playwright";
 import { expect } from "playwright/test";
+import { CMD_ID_CLOSE_TAB, CMD_ID_UNDO_CLOSE_TAB } from "../constants";
 import type { VaultOptions, VaultPageTextContext } from "./types";
 
 // Minimal ItemView interface to avoid importing from obsidian package
