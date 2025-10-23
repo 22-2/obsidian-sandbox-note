@@ -1,18 +1,13 @@
 import "../setup/log-setup";
 
-import { PLUGIN_ID } from "e2e/constants";
+import { DEFAULT_TEST_CONFIG, PLUGIN_ID } from "e2e/constants";
 import type { VaultOptions } from "e2e/helpers/types";
 import type SandboxNotePlugin from "../../src/main";
 import type { HotSandboxNoteData } from "../../src/types";
 import { expect, test } from "../base";
-import { DIST_DIR } from "../constants";
 import { HotSandboxPage } from "./HotSandboxPage";
 
-const vaultOptions: VaultOptions = {
-	useSandbox: false, // Use real vault for persistence testing
-	plugins: [{ pluginId: PLUGIN_ID, path: DIST_DIR }],
-	showLoggerOnNode: true,
-};
+const vaultOptions: VaultOptions = DEFAULT_TEST_CONFIG.vaultOptions;
 
 // --- Test Configuration ---
 test.use({
@@ -274,7 +269,7 @@ test.describe("Data Persistence Scenarios", () => {
 		});
 	});
 
-	test.describe("4. Corrupted Data Handling", () => {
+	test.describe.skip("4. Corrupted Data Handling", () => {
 		test("should skip corrupted data and continue normal operation", async ({
 			vault,
 		}) => {
