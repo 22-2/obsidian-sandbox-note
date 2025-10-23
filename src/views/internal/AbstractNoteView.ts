@@ -1,8 +1,8 @@
-// src/views/internal/AbstractNoteView.ts (修正版)
+// src/views/internal/AbstractNoteView.ts (シンプル版)
 
 import log from "loglevel";
 import { nanoid } from "nanoid";
-import type { Editor, MarkdownEditView } from "obsidian";
+import type { Editor } from "obsidian";
 import {
 	ItemView,
 	Menu,
@@ -30,48 +30,22 @@ export type Context = {
 	emitter: EventEmitter<AppEvents>;
 };
 
-/** Abstract base class for note views with an inline editor. */
+/** ノートビューの基底クラス（インラインエディタ付き） */
 export abstract class AbstractNoteView extends ItemView {
 	public masterId: string;
 	public scope: Scope;
 	public wrapper: MagicalEditorWrapper;
+	public navigation = true; // リネームプロンプトを防ぐ
 
-	// Prevent renaming prompts
-	public navigation = true;
-
-	private stateManager: ViewStateManager;
-	private saveManager: SaveManager;
-	private eventHandler: ViewEventHandler;
+	// プライベート状態
+	private savingPromise: Promise<void> | null = null;
+	private needsContentRestoration = false;
 
 	public get pluginSettings(): PluginSettings {
 		return this.context.getSettings();
 	}
 
-	constructor(
-		leaf: WorkspaceLeaf,
-		protected context: Context,
-	) {
-		super(leaf);
-		// Ensure masterId is initialized.
-		this.masterId = `${HOT_SANDBOX_ID_PREFIX}-${nanoid()}`;
-		this.wrapper = new MagicalEditorWrapper({
-			emitter: this.context.emitter,
-			getActiveView: this.context.getActiveView,
-			parentView: this,
-			workspace: this.app.workspace as never,
-		});
-		this.scope = new Scope(this.app.scope);
-
-		this.stateManager = new ViewStateManager();
-		this.saveManager = new SaveManager(this.context.emitter, () => this);
-		this.eventHandler = new ViewEventHandler(
-			this.context.emitter,
-			() => this.editor,
-			() => this.wrapper.magicalEditor?.editMode,
-		);
-	}
-
-	public get editor() {
+	public get editor(): Editor | undefined {
 		return this.wrapper.magicalEditor?.editor;
 	}
 
@@ -80,293 +54,161 @@ export abstract class AbstractNoteView extends ItemView {
 	}
 
 	public get saving(): Promise<void> | null {
-		return this.saveManager.saving;
+		return this.savingPromise;
 	}
 
+	// サブクラスで実装すべき抽象メソッド
 	public abstract getBaseTitle(): string;
 	public abstract getContent(): string;
 	public abstract getIcon(): string;
 	public abstract getViewType(): string;
 
-	save(): Promise<void> {
-		return this.saveManager.save(this.masterId);
+	constructor(leaf: WorkspaceLeaf, protected context: Context) {
+		super(leaf);
+		this.masterId = `${HOT_SANDBOX_ID_PREFIX}-${nanoid()}`;
+		this.wrapper = new MagicalEditorWrapper({
+			emitter: this.context.emitter,
+			getActiveView: this.context.getActiveView,
+			parentView: this,
+			workspace: this.app.workspace as never,
+		});
+		this.scope = new Scope(this.app.scope);
 	}
 
-	public override getDisplayText(): string {
-		const baseTitle = this.getBaseTitle();
-		const shouldShowUnsaved = this.hasUnsavedChanges;
-		return shouldShowUnsaved ? `*${baseTitle}` : baseTitle;
-	}
-
-	public override getState(): AbstractNoteViewState {
-		const baseState =
-			this.wrapper.magicalEditor.getState() as ObsidianViewState;
-
-		// Extract only necessary properties to avoid saving content in the workspace.
-		const minimalState: Partial<ObsidianViewState> = {
-			mode: baseState.mode,
-			source: baseState.source,
-		};
-
-		// Prevent stateManager.buildState from receiving the bloated baseState.
-		return this.stateManager.buildState(
-			this.getViewType(),
-			this.masterId,
-			minimalState, // Pass a minimal state without content.
-		);
-	}
+	// ========================================
+	// ライフサイクルメソッド
+	// ========================================
 
 	public override async onOpen() {
-		logger.debug("AbstractNoteView.onOpen", { masterId: this.masterId });
+		logger.debug("onOpen", { masterId: this.masterId });
+
 		try {
-			await this.initializeEditor();
+			// エディタを初期化
+			await this.wrapper.initialize(this.contentEl, null);
+
+			// イベントハンドラをセットアップ
 			this.setupEventHandlers();
 
-			// Check if we need to restore content from IndexedDB after editor initialization
-			if (this.stateManager.getNeedsContentRestoration()) {
-				logger.debug(
-					`Requesting content restoration after editor init: ${this.masterId}`,
-				);
+			// コンテンツの復元が必要な場合
+			if (this.needsContentRestoration) {
+				logger.debug(`コンテンツを復元します: ${this.masterId}`);
 				this.context.emitter.emit("request-content-restoration", {
 					view: this,
 					masterId: this.masterId,
 				});
-				this.stateManager.clearNeedsContentRestoration();
+				this.needsContentRestoration = false;
 			}
 
-			this.emitOpenEvents();
+			// 開いたことを通知
+			this.context.emitter.emit("connect-editor-plugin", { view: this });
+			this.context.emitter.emit("view-opened", { view: this });
 		} catch (error) {
-			this.handleInitializationError(error);
+			this.showError(error);
 		}
 	}
 
 	public override async onClose() {
-		// Get content BEFORE emitting view-closed event and unloading wrapper
 		const content = this.getContent();
 
+		// 閉じることを通知（コンテンツを渡す）
 		this.context.emitter.emit("view-closed", {
 			view: this,
-			content: content, // Pass content to event handler
+			content: content,
 		});
 
 		this.wrapper.unload();
 		this.contentEl.empty();
 	}
 
+	// ========================================
+	// 状態管理
+	// ========================================
+
+	public override getState(): AbstractNoteViewState {
+		const editorState =
+			this.wrapper.magicalEditor?.getState() as ObsidianViewState;
+
+		// コンテンツを除外して、モードとソースだけを保存
+		return {
+			...editorState,
+			type: this.getViewType(),
+			state: {
+				masterId: this.masterId,
+				content: this.getContent(),
+			},
+		};
+	}
+
 	public override async setState(
-		{ content, ...stateWithoutContent }: AbstractNoteViewState = {} as never,
-		result: ViewStateResult,
+		state: AbstractNoteViewState = {} as never,
+		result: ViewStateResult
 	): Promise<void> {
-		const newMasterId = stateWithoutContent?.state?.masterId;
+		const newMasterId = state?.state?.masterId;
 		const isWorkspaceRestore = newMasterId && newMasterId !== this.masterId;
 
-		logger.debug("setState called", {
-			type: isWorkspaceRestore
-				? "workspace-restore"
-				: this.editor
-					? "state-update"
-					: "new-view",
+		logger.debug("setState", {
 			currentMasterId: this.masterId,
 			newMasterId: newMasterId,
+			isRestore: isWorkspaceRestore,
 		});
 
-		// 1. Restore the masterId from the State.
+		// 1. masterIdを復元
 		if (newMasterId) {
 			this.masterId = newMasterId;
 		}
 
+		// 2. ソースモードを切り替え
+		// @ts-expect-error
 		const editMode = this.wrapper.magicalEditor?.editMode;
-
-		// Update source mode if needed
 		if (
-			typeof stateWithoutContent.source === "boolean" &&
-			editMode.sourceMode !== stateWithoutContent.source
+			typeof state.source === "boolean" &&
+			editMode?.sourceMode !== state.source
 		) {
 			editMode.toggleSource();
-			stateWithoutContent.layout = true;
+			state.layout = true;
 		}
 
-		// 3. Call the parent's setState method using the clean state.
-		// This ensures editor modes (source/preview, etc.) are set correctly,
-		// but prevents older content from being written.
+		// 3. contentを除外した状態で親クラスのsetStateを呼ぶ
+		const { content, ...stateWithoutContent } = state as any;
 		await super.setState(stateWithoutContent, result);
 
-		// 4. If restoring from the workspace, actively retrieve and apply the latest content from IndexedDB.
+		// 4. ワークスペース復元時はIndexedDBからコンテンツを復元
 		if (isWorkspaceRestore || !this.editor) {
-			// Attempt restoration even in the case of a new view.
-			logger.debug(
-				`Requesting content restoration from IndexedDB for masterId: ${this.masterId}`,
-			);
+			logger.debug(`コンテンツ復元をリクエスト: ${this.masterId}`);
 			if (this.editor) {
-				// If the editor is already ready, restore immediately.
+				// エディタが準備済みなら即座に復元
 				this.context.emitter.emit("request-content-restoration", {
 					view: this,
 					masterId: this.masterId,
 				});
 			} else {
-				// If the editor is not yet present (before onOpen), set a flag to trigger restoration when onOpen is called.
-				this.stateManager.setNeedsContentRestoration(true);
+				// エディタがまだない場合はフラグを立てる
+				this.needsContentRestoration = true;
 			}
 		}
 	}
 
-	public override onPaneMenu(
-		menu: Menu,
-		source: "more-options" | "tab-header" | string,
-	) {
-		this.addConvertToFileMenuItem(menu);
-		this.addClearContentMenuItem(menu);
-		super.onPaneMenu(menu, source);
-	}
+	// ========================================
+	// 保存処理
+	// ========================================
 
-	public setContent(content: string) {
-		if (this.editor && this.editor.getValue() !== content) {
-			this.editor.setValue(content);
-		}
-	}
-
-	private async initializeEditor() {
-		const initialState = this.stateManager.getInitialState();
-		await this.wrapper.initialize(this.contentEl, initialState);
-		this.stateManager.clearInitialState();
-	}
-
-	private emitOpenEvents() {
-		this.context.emitter.emit("connect-editor-plugin", { view: this });
-		this.context.emitter.emit("view-opened", { view: this });
-	}
-
-	private handleInitializationError(error: unknown) {
-		logger.error("Sandbox Note: Failed to initialize inline editor.", error);
-		this.contentEl.empty();
-		this.contentEl.createEl("div", {
-			text: "Error: Could not initialize editor. This might be due to an Obsidian update.",
-			cls: "sandbox-error-message",
-		});
-	}
-
-	protected setupEventHandlers() {
-		if (!this.editor) {
-			logger.error("Editor not found");
-			return;
-		}
-
-		this.eventHandler.setupObsidianLeafListener(this.leaf.id, (cleanup) =>
-			this.register(cleanup),
-		);
-
-		this.eventHandler.setupDomEventListeners(
-			this.contentEl,
-			(el, type, callback) =>
-				this.registerDomEvent(el, type as keyof HTMLElementEventMap, callback),
-		);
-	}
-
-	private addConvertToFileMenuItem(menu: Menu) {
-		menu.addItem((item) =>
-			item
-				.setTitle("Convert to file")
-				.setIcon("file-pen-line")
-				.onClick(async () => {
-					await extractToFileInteraction(this);
-				}),
-		);
-	}
-
-	private addClearContentMenuItem(menu: Menu) {
-		menu.addItem((item) =>
-			item
-				.setTitle("Clear content")
-				.setIcon("trash")
-				.setWarning(true)
-				.onClick(() => {
-					this.setContent("");
-				}),
-		);
-	}
-}
-
-export class ViewStateManager {
-	private initialState: AbstractNoteViewState | null = null;
-	private needsContentRestoration = false;
-
-	setInitialState(state: AbstractNoteViewState | null) {
-		this.initialState = state;
-	}
-
-	getInitialState(): AbstractNoteViewState | null {
-		return this.initialState;
-	}
-
-	clearInitialState() {
-		this.initialState = null;
-	}
-
-	setNeedsContentRestoration(value: boolean) {
-		this.needsContentRestoration = value;
-	}
-
-	getNeedsContentRestoration(): boolean {
-		return this.needsContentRestoration;
-	}
-
-	clearNeedsContentRestoration() {
-		this.needsContentRestoration = false;
-	}
-
-	buildState(
-		viewType: string,
-		masterId: string,
-		baseState: any,
-	): AbstractNoteViewState {
-		// Ensure the content property is excluded from baseState.
-		const { content, ...restOfStateData } = baseState.state || {};
-
-		const state: AbstractNoteViewState = {
-			...baseState, // Basic properties like mode and source are maintained.
-			type: viewType,
-			state: {
-				...restOfStateData, // State properties other than content
-				masterId: masterId,
-				// Content is intentionally omitted here.
-			},
-		};
-		logger.debug("ViewStateManager.buildState (without content)", state);
-		return state;
-	}
-}
-
-export class SaveManager {
-	private savingPromise: Promise<void> | null = null;
-
-	constructor(
-		private emitter: EventEmitter<AppEvents>,
-		private getView: () => any,
-	) {}
-
-	get isSaving(): boolean {
-		return this.savingPromise !== null;
-	}
-
-	get saving(): Promise<void> | null {
-		return this.savingPromise;
-	}
-
-	async save(masterId: string): Promise<void> {
+	async save(): Promise<void> {
+		// すでに保存中なら既存のPromiseを返す
 		if (this.savingPromise) {
-			logger.debug("Save already in progress");
+			logger.debug("保存処理は既に実行中です");
 			return this.savingPromise;
 		}
 
 		const { promise, resolve, reject } = Promise.withResolvers<void>();
 		this.savingPromise = promise;
 
-		const view = this.getView();
-		this.emitter.emit("save-requested", { view });
+		// 保存をリクエスト
+		this.context.emitter.emit("save-requested", { view: this });
 
-		this.emitter.once("save-result", (payload) => {
-			if (payload.view === view) {
-				logger.debug("Save completed for view", masterId);
+		// 保存結果を待つ
+		this.context.emitter.once("save-result", (payload) => {
+			if (payload.view === this) {
+				logger.debug("保存完了", this.masterId);
 				if (payload.success) {
 					resolve();
 				} else {
@@ -378,54 +220,96 @@ export class SaveManager {
 
 		return promise;
 	}
-}
 
-export class ViewEventHandler {
-	constructor(
-		private emitter: EventEmitter<AppEvents>,
-		private getEditor: () => Editor | undefined,
-		private getEditMode: () => MarkdownEditView | undefined,
-	) {}
+	// ========================================
+	// UI関連
+	// ========================================
 
-	setupObsidianLeafListener(
-		leafId: string,
-		registerCallback: (cleanup: () => void) => void,
-	) {
-		const handler = (payload: any) => {
-			if (payload?.view?.leaf?.id === leafId) {
-				this.getEditor()?.focus();
-			}
-		};
-
-		this.emitter.on("obsidian-active-leaf-changed", handler);
-		registerCallback(() => {
-			this.emitter.off("obsidian-active-leaf-changed", handler);
-		});
+	public override getDisplayText(): string {
+		const baseTitle = this.getBaseTitle();
+		return this.hasUnsavedChanges ? `*${baseTitle}` : baseTitle;
 	}
 
-	setupDomEventListeners(
-		contentEl: HTMLElement,
-		registerDomEvent: (
-			el: HTMLElement,
-			type: string,
-			callback: (e: Event) => void,
-		) => void,
-	) {
-		const editor = this.getEditor();
-		if (!editor) {
-			logger.error("Editor not found");
+	public override onPaneMenu(menu: Menu, source: string) {
+		// ファイルに変換
+		menu.addItem((item) =>
+			item
+				.setTitle("Convert to file")
+				.setIcon("file-pen-line")
+				.onClick(async () => {
+					await extractToFileInteraction(this);
+				})
+		);
+
+		// コンテンツをクリア
+		menu.addItem((item) =>
+			item
+				.setTitle("Clear content")
+				.setIcon("trash")
+				.setWarning(true)
+				.onClick(() => {
+					this.setContent("");
+				})
+		);
+
+		super.onPaneMenu(menu, source);
+	}
+
+	public setContent(content: string) {
+		if (this.editor && this.editor.getValue() !== content) {
+			this.editor.setValue(content);
+		}
+	}
+
+	// ========================================
+	// イベントハンドラ
+	// ========================================
+
+	protected setupEventHandlers() {
+		if (!this.editor) {
+			logger.error("エディタが見つかりません");
 			return;
 		}
 
-		registerDomEvent(contentEl, "mousedown", (e) =>
-			handleClick(e as PointerEvent, editor),
+		// リーフがアクティブになったらエディタにフォーカス
+		const leafHandler = (payload: any) => {
+			// @ts-expect-error
+			if (payload?.view?.leaf?.id === this.leaf.id) {
+				this.editor?.focus();
+			}
+		};
+		this.context.emitter.on("obsidian-active-leaf-changed", leafHandler);
+		this.register(() => {
+			this.context.emitter.off(
+				"obsidian-active-leaf-changed",
+				leafHandler
+			);
+		});
+
+		// マウスイベント
+		this.registerDomEvent(this.contentEl, "mousedown", (e) =>
+			handleClick(e as PointerEvent, this.editor!)
 		);
 
-		registerDomEvent(contentEl, "contextmenu", (e) => {
-			const editMode = this.getEditMode();
+		this.registerDomEvent(this.contentEl, "contextmenu", (e) => {
+			// @ts-expect-error
+			const editMode = this.wrapper.magicalEditor?.editMode;
 			if (editMode) {
 				handleContextMenu(e as PointerEvent, editMode);
 			}
+		});
+	}
+
+	// ========================================
+	// エラーハンドリング
+	// ========================================
+
+	private showError(error: unknown) {
+		logger.error("エディタの初期化に失敗しました", error);
+		this.contentEl.empty();
+		this.contentEl.createEl("div", {
+			text: "Error: Could not initialize editor. This might be due to an Obsidian update.",
+			cls: "sandbox-error-message",
 		});
 	}
 }
