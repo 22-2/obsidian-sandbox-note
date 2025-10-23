@@ -1,8 +1,12 @@
 import { CMD_ID_CLOSE_TAB, CMD_ID_UNDO_CLOSE_TAB } from "e2e/constants";
 import type { JSHandle, Locator, Page } from "playwright";
 import { expect } from "playwright/test";
-import type { VaultOptions } from "./managers/VaultManager";
-import type { VaultPageTextContext } from "./types";
+import type { VaultOptions, VaultPageTextContext } from "./types";
+
+// Minimal ItemView interface to avoid importing from obsidian package
+interface ItemView {
+	[key: string]: any;
+}
 
 export interface PageObjectConfig {
 	viewType?: string;
@@ -101,6 +105,30 @@ export class ObsidianPageObject {
 		expect(success).toBe(true);
 	}
 
+	async openPluginWithURL(pluginId: string, url: string): Promise<void> {
+		// Wait for plugin to be loaded
+		await this.page.waitForFunction(
+			(id) => {
+				const plugin = app.plugins.getPlugin(id);
+				return plugin !== null && plugin !== undefined;
+			},
+			pluginId,
+			{ timeout: 10000 }
+		);
+
+		await this.page.evaluate(
+			([id, urlParam]) => {
+				const plugin = app.plugins.getPlugin(id) as any;
+				if (plugin && plugin.openWithURL) {
+					plugin.openWithURL(urlParam);
+				}
+			},
+			[pluginId, url]
+		);
+		// Wait a bit for the view to initialize before network requests start
+		// await this.page.waitForTimeout(300);
+	}
+
 	async clearActiveEditor(): Promise<void> {
 		await this.activeEditor.focus();
 		await this.page.keyboard.press("Control+A");
@@ -122,7 +150,7 @@ export class ObsidianPageObject {
 	}
 
 	async closeActiveTab(): Promise<void> {
-		await this.activeEditor.focus();
+		await this.activeLeaf.focus();
 		await this.runCommand(CMD_ID_CLOSE_TAB);
 	}
 
@@ -248,16 +276,30 @@ export class ObsidianPageObject {
 	// ===== 待機・同期 =====
 
 	async waitForLayoutReady(): Promise<void> {
+		await this.page.waitForFunction(() => app.workspace.layoutReady);
+	}
+
+	async waitForView<T extends ItemView>(
+		viewType: string
+	): Promise<JSHandle<T>> {
 		await this.page.waitForFunction(
-			() => typeof app !== undefined && app.workspace.layoutReady
+			(type) => app.workspace.getLeavesOfType(type).length > 0,
+			viewType
 		);
+		return this.page.evaluateHandle(async (type) => {
+			const leaf = app.workspace.getLeavesOfType(type)?.[0];
+			await app.workspace.revealLeaf(leaf);
+			return leaf.view as unknown as T;
+		}, viewType);
 	}
 
 	async waitForFileCreated(path: string, timeout = 5000): Promise<void> {
 		await this.page.waitForFunction(
 			(p) => app.vault.adapter.exists(p),
 			path,
-			{ timeout }
+			{
+				timeout,
+			}
 		);
 	}
 
@@ -310,6 +352,86 @@ export class ObsidianPageObject {
 
 	async expectActiveEditorToContain(text: string): Promise<void> {
 		await expect(this.activeEditor).toContainText(text);
+	}
+
+	// ===== 汎用UI検証 =====
+
+	/**
+	 * エラー状態を検証
+	 */
+	async expectErrorState(shouldBeVisible: boolean): Promise<void> {
+		if (shouldBeVisible) {
+			await expect(this.page.locator(".error-container")).toBeVisible({
+				timeout: 5000,
+			});
+		} else {
+			await expect(
+				this.page.locator(".error-container")
+			).not.toBeVisible();
+		}
+	}
+
+	/**
+	 * ローディング状態を検証
+	 */
+	async expectLoadingState(shouldBeVisible: boolean): Promise<void> {
+		if (shouldBeVisible) {
+			await expect(this.page.locator(".loading-container")).toBeVisible();
+		} else {
+			await expect(
+				this.page.locator(".loading-container")
+			).not.toBeVisible();
+		}
+	}
+
+	/**
+	 * タイトルバーのタイトルを取得（アクティブなリーフのみ）
+	 */
+	async getTitleBarText(): Promise<string | null> {
+		return await this.page
+			.locator(".workspace-leaf.mod-active .view-header-title")
+			.textContent();
+	}
+
+	/**
+	 * タブヘッダーのタイトルを取得（アクティブなリーフのみ）
+	 */
+	async getTabHeaderText(): Promise<string | null> {
+		return await this.page
+			.locator(
+				".workspace-tab-header.mod-active .workspace-tab-header-inner"
+			)
+			.textContent();
+	}
+
+	/**
+	 * パフォーマンス測定用のヘルパー
+	 */
+	async measureLoadTime(action: () => Promise<void>): Promise<number> {
+		const startTime = Date.now();
+		await action();
+		return Date.now() - startTime;
+	}
+
+	/**
+	 * 検索フィルターを適用
+	 */
+	async applySearchFilter(
+		searchText: string,
+		selector = 'input[type="text"]'
+	): Promise<void> {
+		const searchInput = this.page.locator(selector);
+		await searchInput.fill(searchText);
+		await this.page.waitForTimeout(300);
+	}
+
+	/**
+	 * 検索フィルターをクリア
+	 */
+	async clearSearchFilter(selector = 'input[type="text"]'): Promise<void> {
+		const searchInput = this.page.locator(selector);
+		await searchInput.clear();
+		await this.page.waitForTimeout(200);
 	}
 }
 

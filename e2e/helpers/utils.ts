@@ -1,19 +1,31 @@
-import type { Plugin } from "obsidian";
 import type { JSHandle, Page } from "playwright";
+import type { Plugin } from "./types";
 
-export function getPluginHandleMap(
+export async function getPluginHandleMap(
 	page: Page,
 	plugins: { pluginId: string; path: string }[]
 ): Promise<JSHandle<Map<string, Plugin>>> {
+	// Wait for plugins to be loaded
+	await page.waitForFunction(
+		(pluginIds) => {
+			const app = (globalThis as any).app;
+			if (!app?.plugins) return false;
+			return pluginIds.every((id: string) => app.plugins.getPlugin(id));
+		},
+		plugins.map((p) => p.pluginId),
+		{ timeout: 10000 }
+	);
+
 	return page.evaluateHandle((plugins) => {
 		const map = new Map<string, Plugin>();
 		plugins.forEach((p) => {
-			map.set(p.pluginId, app?.plugins.getPlugin(p.pluginId)!);
+			const plugin = (globalThis as any).app?.plugins.getPlugin(
+				p.pluginId
+			);
+			if (plugin) {
+				map.set(p.pluginId, plugin);
+			}
 		});
 		return map;
 	}, plugins);
-}
-
-export function delay(ms: number): Promise<void> {
-	return new Promise((resolve) => setTimeout(resolve, ms));
 }

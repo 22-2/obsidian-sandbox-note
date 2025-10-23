@@ -2,39 +2,31 @@
 // ipc-bridge.mts - IPCの簡素化と統合
 // ===================================================================
 
-import type { PageManager } from "./managers/PageManager";
-
 export class IPCBridge {
-	constructor(private pageManager: PageManager) {}
+	constructor(private setup: { ensureSingleWindow: () => Promise<any>; waitForVaultReady: (page: any) => Promise<void> }) {}
 
 	private async send<T>(channel: string, ...args: unknown[]): Promise<T> {
 		await this.ensurePageLoaded();
-		return (await this.pageManager.ensureSingleWindow()).evaluate(
-			([ch, ...restArgs]) => {
-				return (window as any).electron.ipcRenderer.sendSync(
-					ch,
-					...restArgs
-				);
+		return (await this.setup.ensureSingleWindow()).evaluate(
+			([ch, ...restArgs]: [string, ...unknown[]]) => {
+				return (window as any).electron.ipcRenderer.sendSync(ch, ...restArgs);
 			},
 			[channel, ...args]
 		);
 	}
 
 	private async ensurePageLoaded(): Promise<void> {
-		const page = await this.pageManager.ensureSingleWindow();
+		const page = await this.setup.ensureSingleWindow();
 		await page.waitForLoadState("domcontentloaded");
 
 		// スターターページでない場合はappオブジェクトを待つ
 		const isStarter = page.url().includes("starter");
 		if (!isStarter) {
-			return this.pageManager.waitForVaultReady(page);
+			return this.setup.waitForVaultReady(page);
 		}
 	}
 
-	async openVault(
-		vaultPath: string,
-		forceNew = false
-	): Promise<true | string> {
+	async openVault(vaultPath: string, forceNew = false): Promise<true | string> {
 		return this.send<true | string>("vault-open", vaultPath, forceNew);
 	}
 

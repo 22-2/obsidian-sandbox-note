@@ -4,6 +4,7 @@ import { VIEW_TYPE_HOT_SANDBOX } from "src/utils/constants";
 import invariant from "tiny-invariant";
 import { fileURLToPath } from "url";
 import manifest from "../manifest.json" with { type: "json" };
+import type { TestPlugin } from "./helpers/types";
 import paths from "./paths.json" with { type: "json" };
 
 // --- Project Structure ---
@@ -59,4 +60,26 @@ export const CMD_ID_UNDO_CLOSE_TAB = "workspace:undo-close-pane";
 
 export const DATAT_TYPE_MARKDOWN = "markdown";
 export const DATA_TYPE_EMPTY = "empty";
-export const DATA_TYPE_HOT_SANDBOX = VIEW_TYPE_HOT_SANDBOX
+export const DATA_TYPE_HOT_SANDBOX = VIEW_TYPE_HOT_SANDBOX;
+/**
+ * Default test configuration for reuse
+ */
+
+export const DEFAULT_TEST_CONFIG = {
+	vaultOptions: {
+		useSandbox: true,
+		showLoggerOnNode: true,
+		plugins: [
+			{
+				path: DIST_DIR,
+				pluginId: PLUGIN_ID,
+			},
+		],
+	},
+};
+
+export const HOT_RELOAD_PLUGIN: TestPlugin = {
+	path: path.join(E2E_ROOT_DIR, "assets", "hot-reload"),
+	pluginId: "hot-reload",
+	useSymlink: true,
+};
