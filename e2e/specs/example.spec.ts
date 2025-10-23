@@ -6,8 +6,16 @@ import "../setup/log-setup";
 // ===================================================================
 
 import { expect, test } from "../base";
-import { DIST_DIR, PLUGIN_ID, SANDBOX_VAULT_NAME } from "../constants";
+import {
+	DEFAULT_TEST_CONFIG,
+	PLUGIN_ID,
+	SANDBOX_VAULT_NAME,
+} from "../constants";
 import { HotSandboxPage } from "../specs/HotSandboxPage";
+
+test.use({
+	vaultOptions: { ...DEFAULT_TEST_CONFIG, useSandbox: true },
+});
 
 test("sandbox test: plugin activation and view creation via command", async ({
 	vault,
@@ -35,17 +43,4 @@ test("sandbox test: plugin activation and view creation via command", async ({
 	// 3. Verify the view opened correctly
 	await hsPage.expectSandboxViewCount(1);
 	await hsPage.expectActiveTabType(VIEW_TYPE_HOT_SANDBOX);
-});
-
-// Custom settings are maintained
-test.use({
-	vaultOptions: {
-		useSandbox: true,
-		plugins: [
-			{
-				path: DIST_DIR,
-				pluginId: PLUGIN_ID,
-			},
-		],
-	},
 });
