@@ -103,7 +103,7 @@ export class CacheManager implements IManager {
 		logger.debug(`Deleted note: ${masterId}`);
 	}
 
-	updateSandboxContent(masterId: string, content: string): void {
+	set(masterId: string, content: string): void {
 		const note = this.sandboxes.get(masterId);
 		if (note) {
 			note.content = content;

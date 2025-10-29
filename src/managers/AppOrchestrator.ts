@@ -91,12 +91,7 @@ export class AppOrchestrator implements IManager {
 		// Register DatabaseManager
 		this.dbManager = new DatabaseManager({
 			dbAPI: this.dbAPI,
-			cache: {
-				get: (noteId: string) => this.cacheManager.get(noteId),
-				set: (noteId: string, content: string) =>
-					this.cacheManager.updateSandboxContent(noteId, content),
-				delete: (noteId: string) => this.cacheManager.delete(noteId),
-			},
+			cache: this.cacheManager,
 			emitter: this.emitter,
 			getAllHotSandboxViews: () => this.viewManager.getAllViews(),
 		});

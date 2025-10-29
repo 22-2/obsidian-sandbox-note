@@ -158,7 +158,7 @@ export class PluginEventManager implements IManager {
 		}
 
 		// Update in-memory state
-		this.context.cache.updateSandboxContent(sourceView.masterId, content);
+		this.context.cache.set(sourceView.masterId, content);
 
 		// Schedule debounced save to IndexedDB
 		this.context.saveSandbox(sourceView.masterId, content, SAVE_DEBOUNCE_MS);
