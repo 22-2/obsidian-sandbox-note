@@ -50,7 +50,9 @@
 		"idb-keyval": "^6.2.2",
 		"loglevel": "^1.9.2",
 		"monkey-around": "^3.0.0",
-		"nanoid": "^5.1.6"
+		"nanoid": "^5.1.6",
+		"reflect-metadata": "^0.2.2",
+		"tsyringe": "^4.10.0"
 	},
 	"pnpm": {
 		"onlyBuiltDependencies": [

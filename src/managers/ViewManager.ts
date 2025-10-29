@@ -4,6 +4,7 @@ import { VIEW_TYPE_HOT_SANDBOX } from "src/utils/constants";
 import { activateView } from "src/utils/obsidian";
 import { HotSandboxNoteView } from "src/views/HotSandboxNoteView";
 import { AbstractNoteView } from "src/views/internal/AbstractNoteView";
+import { injectable } from "tsyringe";
 import type { CacheManager } from "./CacheManager";
 import type { IManager } from "./IManager";
 
@@ -20,6 +21,7 @@ type Context = {
 const logger = log.getLogger("ViewManager");
 
 /** Manages registration and activation of custom views */
+@injectable()
 export class ViewManager implements IManager {
 	constructor(private context: Context) {}
 

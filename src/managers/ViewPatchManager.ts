@@ -7,6 +7,7 @@ import type { AppEvents } from "src/events/AppEvents";
 import type { EventEmitter } from "src/utils/EventEmitter";
 import { HotSandboxNoteView } from "src/views/HotSandboxNoteView";
 import { getSandboxVaultPath } from "src/views/internal/utils";
+import { injectable } from "tsyringe";
 import type { AppOrchestrator } from "./AppOrchestrator";
 import type { IManager } from "./IManager";
 
@@ -24,6 +25,7 @@ type Context = {
  * Manages monkey-patches for core Obsidian view functionality,
  * specifically for HotSandboxNoteView lifecycle methods (close, save).
  */
+@injectable()
 export class ViewPatchManager implements IManager {
 	private patchCleanupFns: (() => void)[] = [];
 

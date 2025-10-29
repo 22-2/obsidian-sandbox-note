@@ -1,3 +1,4 @@
+import "reflect-metadata";
 import { overwriteLogLevel } from "./utils/setup-logger";
 
 import log from "loglevel";

@@ -1,11 +1,13 @@
 import log from "loglevel";
 import type { WorkspaceLeaf } from "obsidian";
+import "reflect-metadata";
 import type { AppEvents } from "src/events/AppEvents";
 import type SandboxNotePlugin from "src/main";
 import { DatabaseManager } from "src/managers/DatabaseManager";
 import type { EventEmitter } from "src/utils/EventEmitter";
 import { HotSandboxNoteView } from "src/views/HotSandboxNoteView";
 import invariant from "tiny-invariant";
+import { container, injectable } from "tsyringe";
 import { CacheManager } from "./CacheManager";
 import { CodeMirrorExtensionManager } from "./CodeMirrorExtensionManager";
 import { DatabaseAPI } from "./DatabaseAPI";
@@ -20,23 +22,7 @@ import { ViewPatchManager } from "./ViewPatchManager";
 
 const logger = log.getLogger("AppOrchestrator");
 
-// Manager type definition map
-interface ManagerTypeMap {
-	cacheManager: CacheManager;
-	cmExtensionManager: CodeMirrorExtensionManager;
-	dbManager: DatabaseManager;
-	editorSyncManager: EditorSyncManager;
-	obsidianEventManager: ObsidianEventManager;
-	pluginEventManager: PluginEventManager;
-	settingsManager: SettingsManager;
-	uriManager: URIManager;
-	viewManager: ViewManager;
-	viewPatchManager: ViewPatchManager;
-}
-
-type ManagerName = keyof ManagerTypeMap;
-
-const MANAGER_NAMES: readonly ManagerName[] = [
+const MANAGER_NAMES = [
 	"settingsManager",
 	"cacheManager",
 	"dbManager",
@@ -50,275 +36,252 @@ const MANAGER_NAMES: readonly ManagerName[] = [
 ] as const;
 
 /**
- * Manages the manager's lifecycle and dependencies as a DI container.
+ * Manages the manager's lifecycle and dependencies using tsyringe DI container.
  */
+@injectable()
 export class AppOrchestrator implements IManager {
 	private readonly plugin: SandboxNotePlugin;
 	private readonly emitter: EventEmitter<AppEvents>;
 	private readonly dbAPI: DatabaseAPI;
 
-	private readonly instances = new Map<ManagerName, IManager>();
-	private readonly factories = new Map<ManagerName, () => IManager>();
+	private settingsManager!: SettingsManager;
+	private cacheManager!: CacheManager;
+	private dbManager!: DatabaseManager;
+	private viewManager!: ViewManager;
+	private editorSyncManager!: EditorSyncManager;
+	private cmExtensionManager!: CodeMirrorExtensionManager;
+	private pluginEventManager!: PluginEventManager;
+	private viewPatchManager!: ViewPatchManager;
+	private uriManager!: URIManager;
+	private obsidianEventManager!: ObsidianEventManager;
 
 	constructor(plugin: SandboxNotePlugin, emitter: EventEmitter<AppEvents>) {
 		this.plugin = plugin;
 		this.emitter = emitter;
 		this.dbAPI = new DatabaseAPI();
 
-		this.registerAllFactories();
+		this.setupDependencies();
 	}
 
-	/**
-	 * Get the manager instance by name.
-	 * Create and cache if it doesn't exist.
-	 */
-	public get<K extends ManagerName>(name: K): ManagerTypeMap[K] {
-		let instance = this.instances.get(name);
+	private setupDependencies(): void {
+		// Register singleton instances
+		container.registerInstance("plugin", this.plugin);
+		container.registerInstance("emitter", this.emitter);
+		container.registerInstance("dbAPI", this.dbAPI);
 
-		if (!instance) {
-			const factory = this.factories.get(name);
-			if (!factory) {
-				throw new Error(`Factory not registered for manager: ${name}`);
-			}
-			instance = factory();
-			this.instances.set(name, instance);
-		}
-
-		return instance as ManagerTypeMap[K];
-	}
-
-	private registerAllFactories(): void {
-		this.registerSettingsManagerFactory();
-		this.registerCacheManagerFactory();
-		this.registerDatabaseManagerFactory();
-		this.registerViewManagerFactory();
-		this.registerEditorSyncManagerFactory();
-		this.registerCodeMirrorExtensionManagerFactory();
-		this.registerPluginEventManagerFactory();
-		this.registerURIManagerFactory();
-		this.registerViewPatchManagerFactory();
-		this.registerObsidianEventManagerFactory();
-	}
-
-	private registerSettingsManagerFactory(): void {
-		this.factories.set("settingsManager", () => {
-			return new SettingsManager({
-				emitter: this.emitter,
-				loadData: this.plugin.loadData.bind(this.plugin),
-				saveData: this.plugin.saveData.bind(this.plugin),
-				getObsidianConfig: this.plugin.app.vault.getConfig.bind(
-					this.plugin.app.vault,
-				),
-			});
+		// Register SettingsManager
+		this.settingsManager = new SettingsManager({
+			emitter: this.emitter,
+			loadData: this.plugin.loadData.bind(this.plugin),
+			saveData: this.plugin.saveData.bind(this.plugin),
+			// @ts-expect-error
+			getObsidianConfig: this.plugin.app.vault.getConfig.bind(
+				this.plugin.app.vault,
+			),
 		});
-	}
+		container.registerInstance(SettingsManager, this.settingsManager);
 
-	private registerCacheManagerFactory(): void {
-		this.factories.set("cacheManager", () => {
-			return new CacheManager({
-				emitter: this.emitter,
-				// FIXE: Calling `getAllSandboxes` directly results in "Maximum call stack size exceeded."
-				getDbManager: () => this.get("dbManager"),
-			});
+		// Register CacheManager (without dbManager dependency)
+		this.cacheManager = new CacheManager({
+			emitter: this.emitter,
+			getAllSandboxes: () => this.dbAPI.getAllSandboxes(),
 		});
-	}
+		container.registerInstance(CacheManager, this.cacheManager);
 
-	private registerDatabaseManagerFactory(): void {
-		this.factories.set("dbManager", () => {
-			const cache = this.get("cacheManager");
-			return new DatabaseManager({
-				dbAPI: this.dbAPI,
-				cache: {
-					get: (noteId: string) => cache.get(noteId),
-					set: (noteId: string, content: string) =>
-						cache.updateSandboxContent(noteId, content),
-					delete: (noteId: string) => cache.delete(noteId),
-				},
-				emitter: this.emitter,
-				getAllHotSandboxViews: () => this.get("viewManager").getAllViews(),
-			});
+		// Register DatabaseManager
+		this.dbManager = new DatabaseManager({
+			dbAPI: this.dbAPI,
+			cache: {
+				get: (noteId: string) => this.cacheManager.get(noteId),
+				set: (noteId: string, content: string) =>
+					this.cacheManager.updateSandboxContent(noteId, content),
+				delete: (noteId: string) => this.cacheManager.delete(noteId),
+			},
+			emitter: this.emitter,
+			getAllHotSandboxViews: () => this.viewManager.getAllViews(),
 		});
-	}
+		container.registerInstance(DatabaseManager, this.dbManager);
 
-	private registerViewManagerFactory(): void {
-		this.factories.set("viewManager", () => {
-			const settings = this.get("settingsManager");
-			const cache = this.get("cacheManager");
-
-			// We need a reference to the ViewManager itself, so we'll set it later.
-			let viewManager: ViewManager;
-
-			viewManager = new ViewManager({
-				registerView: (type, viewCreator) =>
-					this.plugin.registerView(type, viewCreator),
-				createView: (leaf: WorkspaceLeaf): HotSandboxNoteView =>
-					this.createHotSandboxNoteView(leaf, viewManager),
-				getLeaf: (type) => this.plugin.app.workspace.getLeaf(type),
-				detachLeavesOfType: (type) =>
-					this.plugin.app.workspace.detachLeavesOfType(type),
-				getActiveViewOfType: (type) =>
-					this.plugin.app.workspace.getActiveViewOfType(type),
-				getLeavesOfType: (type: string) =>
-					this.plugin.app.workspace.getLeavesOfType(type),
-				getAllSandboxes: () => cache.getAllSandboxes(),
-			});
-
-			return viewManager;
+		// Register ViewManager
+		this.viewManager = new ViewManager({
+			registerView: (type, viewCreator) =>
+				this.plugin.registerView(type, viewCreator),
+			createView: (leaf: WorkspaceLeaf): HotSandboxNoteView =>
+				this.createHotSandboxNoteView(leaf),
+			getLeaf: (type) => this.plugin.app.workspace.getLeaf(type),
+			detachLeavesOfType: (type) =>
+				this.plugin.app.workspace.detachLeavesOfType(type),
+			getActiveViewOfType: (type) =>
+				this.plugin.app.workspace.getActiveViewOfType(type),
+			getLeavesOfType: (type: string) =>
+				this.plugin.app.workspace.getLeavesOfType(type),
+			getAllSandboxes: () => this.cacheManager.getAllSandboxes(),
 		});
+		container.registerInstance(ViewManager, this.viewManager);
+
+		// Register EditorSyncManager
+		this.editorSyncManager = new EditorSyncManager({
+			emitter: this.emitter,
+			getAllHotSandboxViews: () => this.viewManager.getAllViews(),
+			getAllSandboxes: () => this.cacheManager.getAllSandboxes(),
+			registerNewSandbox: (note) => this.cacheManager.registerNewSandbox(note),
+			getSandboxContent: (noteId) =>
+				this.cacheManager.getSandboxContent(noteId),
+			getActiveView: () => this.viewManager.getActiveView(),
+			workspace: this.plugin.app.workspace as never,
+			getSettings: this.getSettings.bind(this),
+		});
+		container.registerInstance(EditorSyncManager, this.editorSyncManager);
+
+		// Register CodeMirrorExtensionManager
+		this.cmExtensionManager = new CodeMirrorExtensionManager({
+			emitter: this.emitter,
+			plugin: this.plugin,
+		});
+		container.registerInstance(
+			CodeMirrorExtensionManager,
+			this.cmExtensionManager,
+		);
+
+		// Register PluginEventManager
+		this.pluginEventManager = new PluginEventManager({
+			cache: this.cacheManager,
+			emitter: this.emitter,
+			settings: this.settingsManager,
+			connectEditorPluginToView: (leaf) =>
+				this.cmExtensionManager.connectEditorPluginToView(leaf),
+			saveSandbox: (...args) => this.dbManager.debouncedSaveSandboxes(...args),
+			immediateSave: (masterId: string, content: string) =>
+				this.dbManager.immediateSave(masterId, content),
+			clearOldDeadSandboxes: () => this.dbManager.clearOldDeadSandboxes(),
+			getAllViews: () => this.viewManager.getAllViews(),
+			isLastHotView: (masterId: string) =>
+				this.viewManager.isLastHotView(masterId),
+			deleteFromAll: (masterId: string | null) =>
+				this.dbManager.deleteFromAll(masterId),
+			togglLoggersBy: this.plugin.togglLoggersBy.bind(this.plugin),
+		});
+		container.registerInstance(PluginEventManager, this.pluginEventManager);
+
+		// Register ViewPatchManager
+		this.viewPatchManager = new ViewPatchManager({
+			emitter: this.emitter,
+			register: this.plugin.register.bind(this.plugin),
+			getActiveView: () => this.viewManager.getActiveView(),
+			// @ts-expect-error
+			findCommand: this.plugin.app.commands.findCommand.bind(
+			// @ts-expect-error
+				this.plugin.app.commands,
+			),
+			getSettings: () => this.settingsManager.getSettings(),
+		});
+		container.registerInstance(ViewPatchManager, this.viewPatchManager);
+
+		// Register URIManager
+		this.uriManager = new URIManager({
+			registerObsidianProtocolHandler:
+				this.plugin.registerObsidianProtocolHandler.bind(this.plugin),
+			createAndOpenSandbox: (content) =>
+				this.viewManager.createAndOpenSandbox(content),
+		});
+		container.registerInstance(URIManager, this.uriManager);
+
+		// Register ObsidianEventManager
+		this.obsidianEventManager = new ObsidianEventManager(
+			{
+				getActiveView: () => this.viewManager.getActiveView(),
+				workspaceEvents: this.plugin.app.workspace,
+			},
+			this.emitter,
+		);
+		container.registerInstance(
+			ObsidianEventManager,
+			this.obsidianEventManager,
+		);
 	}
 
-	private createHotSandboxNoteView(
-		leaf: WorkspaceLeaf,
-		viewManager: ViewManager,
-	): HotSandboxNoteView {
-		const settings = this.get("settingsManager");
-
+	private createHotSandboxNoteView(leaf: WorkspaceLeaf): HotSandboxNoteView {
 		return new HotSandboxNoteView(leaf, {
 			emitter: this.emitter,
-			getActiveView: () => viewManager.getActiveView(),
-			getSettings: () => settings.getSettings(),
+			getActiveView: () => this.viewManager.getActiveView(),
+			getSettings: () => this.settingsManager.getSettings(),
 			getDisplayIndex: (masterId: string) => {
 				invariant(masterId, "masterId must not be null");
-				const groupCount = viewManager.indexOfMasterId(masterId);
-				// logger.debug("groupCount", groupCount);
+				const groupCount = this.viewManager.indexOfMasterId(masterId);
 				return groupCount === -1 ? 0 : groupCount + 1;
 			},
-			isLastHotView: (id: string) => viewManager.isLastHotView(id),
-			deleteFromAll: (id: string) => this.get("dbManager").deleteFromAll(id),
-		});
-	}
-
-	private registerEditorSyncManagerFactory(): void {
-		this.factories.set("editorSyncManager", () => {
-			const views = this.get("viewManager");
-			const cache = this.get("cacheManager");
-
-			return new EditorSyncManager({
-				emitter: this.emitter,
-				getAllHotSandboxViews: () => views.getAllViews(),
-				getAllSandboxes: () => cache.getAllSandboxes(),
-				registerNewSandbox: (note) => cache.registerNewSandbox(note),
-				getSandboxContent: (noteId) => cache.getSandboxContent(noteId),
-				getActiveView: () => views.getActiveView(),
-				workspace: this.plugin.app.workspace as never,
-				getSettings: this.getSettings.bind(this),
-			});
-		});
-	}
-
-	private registerCodeMirrorExtensionManagerFactory(): void {
-		this.factories.set("cmExtensionManager", () => {
-			return new CodeMirrorExtensionManager({
-				emitter: this.emitter,
-				plugin: this.plugin,
-			});
-		});
-	}
-
-	private registerPluginEventManagerFactory(): void {
-		this.factories.set("pluginEventManager", () => {
-			const db = this.get("dbManager");
-			const views = this.get("viewManager");
-			const cache = this.get("cacheManager");
-			const settings = this.get("settingsManager");
-			const cmExtension = this.get("cmExtensionManager");
-
-			return new PluginEventManager({
-				cache,
-				emitter: this.emitter,
-				settings,
-				connectEditorPluginToView: (leaf) =>
-					cmExtension.connectEditorPluginToView(leaf),
-				saveSandbox: (...args) => db.debouncedSaveSandboxes(...args),
-				immediateSave: (masterId: string, content: string) =>
-					db.immediateSave(masterId, content),
-				clearOldDeadSandboxes: () => db.clearOldDeadSandboxes(),
-				getAllViews: () => views.getAllViews(),
-				isLastHotView: (masterId: string) => views.isLastHotView(masterId),
-				deleteFromAll: (masterId: string | null) => db.deleteFromAll(masterId),
-				togglLoggersBy: this.plugin.togglLoggersBy.bind(this.plugin),
-			});
-		});
-	}
-
-	private registerObsidianEventManagerFactory(): void {
-		this.factories.set("obsidianEventManager", () => {
-			const views = this.get("viewManager");
-			return new ObsidianEventManager(
-				{
-					getActiveView: () => views.getActiveView(),
-					workspaceEvents: this.plugin.app.workspace,
-				},
-				this.emitter,
-			);
-		});
-	}
-
-	private registerURIManagerFactory(): void {
-		this.factories.set("uriManager", () => {
-			const views = this.get("viewManager");
-			return new URIManager({
-				registerObsidianProtocolHandler:
-					this.plugin.registerObsidianProtocolHandler.bind(this.plugin),
-				createAndOpenSandbox: (content) => views.createAndOpenSandbox(content),
-			});
-		});
-	}
-
-	private registerViewPatchManagerFactory(): void {
-		this.factories.set("viewPatchManager", () => {
-			return new ViewPatchManager({
-				emitter: this.emitter,
-				register: this.plugin.register.bind(this.plugin),
-				getActiveView: () => this.get("viewManager").getActiveView(),
-				findCommand: this.plugin.app.commands.findCommand.bind(
-					this.plugin.app.commands,
-				),
-				getSettings: () => this.get("settingsManager").getSettings(),
-			});
+			isLastHotView: (id: string) => this.viewManager.isLastHotView(id),
+			deleteFromAll: (id: string) => this.dbManager.deleteFromAll(id),
 		});
 	}
 
 	async load(): Promise<void> {
-		for (const name of MANAGER_NAMES) {
-			const manager = this.get(name);
-			invariant(manager?.load, `Manager ${name} must have a load method`);
+		const managers = [
+			this.settingsManager,
+			this.cacheManager,
+			this.dbManager,
+			this.viewManager,
+			this.editorSyncManager,
+			this.cmExtensionManager,
+			this.pluginEventManager,
+			this.viewPatchManager,
+			this.uriManager,
+			this.obsidianEventManager,
+		];
+
+		for (const manager of managers) {
+			invariant(manager?.load, `Manager must have a load method`);
 			await manager.load();
 		}
 		logger.debug("AppOrchestrator: All managers loaded successfully");
 	}
 
 	unload(): void {
-		// Unload in reverse order (considering dependencies)
-		const reversedNames = [...MANAGER_NAMES].reverse();
-		for (const name of reversedNames) {
-			const manager = this.instances.get(name);
+		const managers = [
+			this.obsidianEventManager,
+			this.uriManager,
+			this.viewPatchManager,
+			this.pluginEventManager,
+			this.cmExtensionManager,
+			this.editorSyncManager,
+			this.viewManager,
+			this.dbManager,
+			this.cacheManager,
+			this.settingsManager,
+		];
+
+		for (const manager of managers) {
 			if (manager) {
-				invariant(manager.unload, `Manager ${name} must have an unload method`);
+				invariant(manager.unload, `Manager must have an unload method`);
 				manager.unload();
 			}
 		}
-		this.instances.clear();
+
+		container.clearInstances();
 		logger.debug("AppOrchestrator: All managers unloaded successfully");
 	}
 
 	// --- Public API: Delegated Methods ---
 
 	getActiveView() {
-		return this.get("viewManager").getActiveView();
+		return this.viewManager.getActiveView();
 	}
 
 	activateView() {
-		return this.get("viewManager").activateView();
+		return this.viewManager.activateView();
 	}
 
 	getSettings() {
-		return this.get("settingsManager").getSettings();
+		return this.settingsManager.getSettings();
 	}
 
 	async updateSettings(
 		settings: Parameters<SettingsManager["updateSettingsAndSave"]>[0],
 	) {
-		await this.get("settingsManager").updateSettingsAndSave(settings);
+		await this.settingsManager.updateSettingsAndSave(settings);
+	}
+
+	get(name: "dbManager"): DatabaseManager {
+		return this.dbManager;
 	}
 }

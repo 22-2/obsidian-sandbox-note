@@ -2,6 +2,7 @@ import log from "loglevel";
 import type { AppEvents } from "src/events/AppEvents";
 import type { EventEmitter } from "src/utils/EventEmitter";
 import { HotSandboxNoteView } from "src/views/HotSandboxNoteView";
+import { injectable } from "tsyringe";
 import type { AppOrchestrator } from "./AppOrchestrator";
 import type { CacheManager } from "./CacheManager";
 import type { IManager } from "./IManager";
@@ -23,6 +24,7 @@ type Context = {
 };
 
 /** Manages shared content synchronization across views */
+@injectable()
 export class EditorSyncManager implements IManager {
 	// --- For new HotSandboxNoteView ---
 	private viewMasterIdMap = new WeakMap<HotSandboxNoteView, string>();

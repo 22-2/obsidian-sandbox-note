@@ -2,6 +2,7 @@ import log from "loglevel";
 import type { Workspace } from "obsidian";
 import type { AppEvents } from "src/events/AppEvents";
 import type { EventEmitter } from "src/utils/EventEmitter";
+import { injectable } from "tsyringe";
 import type { IManager } from "./IManager";
 import { ViewManager } from "./ViewManager";
 
@@ -15,6 +16,7 @@ type Context = {
 };
 
 /** Manages Obsidian workspace event handling */
+@injectable()
 export class ObsidianEventManager implements IManager {
 	constructor(
 		private context: Context,

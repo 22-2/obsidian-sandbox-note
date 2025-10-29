@@ -2,29 +2,27 @@ import log from "loglevel";
 import type { AppEvents } from "src/events/AppEvents";
 import type { HotSandboxNoteData } from "src/types";
 import type { EventEmitter } from "src/utils/EventEmitter";
-import type { DatabaseManager } from "./DatabaseManager";
+import { injectable } from "tsyringe";
 import type { IManager } from "./IManager";
 
 const logger = log.getLogger("HotSandboxManager");
 
 type Context = {
-	// getAllSandboxes: DatabaseManager["getAllSandboxes"];
 	emitter: EventEmitter<AppEvents>;
-	getDbManager: () => {
-		getAllSandboxes: DatabaseManager["getAllSandboxes"];
-	};
+	getAllSandboxes: () => Promise<HotSandboxNoteData[]>;
 };
 
+@injectable()
 export class CacheManager implements IManager {
 	private sandboxes = new Map<string, HotSandboxNoteData>();
 
 	constructor(private context: Context) {}
 
 	async load(): Promise<void> {
-		const allSandboxes = await this.context.getDbManager().getAllSandboxes();
+		const allSandboxes = await this.context.getAllSandboxes();
 
 		logger.debug(
-			`📦 Loading sandboxes from IndexedDB, total: ${allSandboxes.length}`,
+			`📦 Loading sandboxes from IndexedDB, total: ${allSandboxes.length}`
 		);
 
 		let loadedCount = 0;
@@ -35,7 +33,7 @@ export class CacheManager implements IManager {
 			if (this.validateSandboxData(note)) {
 				this.sandboxes.set(note.id, note);
 				logger.debug(
-					`  ✅ Loaded: ${note.id}, content length: ${note.content.length}`,
+					`  ✅ Loaded: ${note.id}, content length: ${note.content.length}`
 				);
 				loadedCount++;
 			} else {
@@ -45,7 +43,9 @@ export class CacheManager implements IManager {
 		});
 
 		logger.debug(
-			`📦 Loaded ${loadedCount} hot sandbox notes into memory${skippedCount > 0 ? `, skipped ${skippedCount} corrupted` : ""}.`,
+			`📦 Loaded ${loadedCount} hot sandbox notes into memory${
+				skippedCount > 0 ? `, skipped ${skippedCount} corrupted` : ""
+			}.`
 		);
 		// this.emitter.emit("notes-loaded", { count: allNotes.length });
 	}
@@ -72,7 +72,11 @@ export class CacheManager implements IManager {
 	getSandboxContent(masterId: string): string | undefined {
 		const sandbox = this.sandboxes.get(masterId);
 		logger.debug(
-			`🔍 getSandboxContent(${masterId}): ${sandbox ? `found, length: ${sandbox.content.length}` : "not found"}`,
+			`🔍 getSandboxContent(${masterId}): ${
+				sandbox
+					? `found, length: ${sandbox.content.length}`
+					: "not found"
+			}`
 		);
 		return sandbox?.content;
 	}

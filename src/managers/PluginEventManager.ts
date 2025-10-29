@@ -6,6 +6,7 @@ import type { IManager } from "src/managers/IManager";
 import type { EventEmitter } from "src/utils/EventEmitter";
 import { SAVE_DEBOUNCE_MS } from "src/utils/constants";
 import { HotSandboxNoteView } from "src/views/HotSandboxNoteView";
+import { injectable } from "tsyringe";
 import type SandboxPlugin from "../main";
 import type { CacheManager } from "./CacheManager";
 import type { SettingsManager } from "./SettingsManager";
@@ -27,6 +28,7 @@ interface Context {
 	togglLoggersBy: SandboxPlugin["togglLoggersBy"];
 }
 
+@injectable()
 export class PluginEventManager implements IManager {
 	constructor(private readonly context: Context) {}
 

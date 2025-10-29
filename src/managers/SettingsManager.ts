@@ -3,15 +3,18 @@ import type { AppEvents } from "src/events/AppEvents";
 import type { PluginSettings } from "src/settings";
 import { DEFAULT_SETTINGS } from "src/settings";
 import type { EventEmitter } from "src/utils/EventEmitter";
+import { injectable } from "tsyringe";
 import type { IManager } from "./IManager";
 
 type Context = {
 	emitter: EventEmitter<AppEvents>;
 	loadData: Plugin["loadData"];
 	saveData: Plugin["saveData"];
+			// @ts-expect-error
 	getObsidianConfig: Vault["getConfig"];
 };
 
+@injectable()
 export class SettingsManager implements IManager {
 	private settings: PluginSettings = DEFAULT_SETTINGS;
 	constructor(private context: Context) {}

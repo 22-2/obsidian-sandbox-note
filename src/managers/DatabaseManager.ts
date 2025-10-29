@@ -7,6 +7,7 @@ import type { EventEmitter } from "src/utils/EventEmitter";
 import { HotSandboxNoteView } from "src/views/HotSandboxNoteView";
 import type { AbstractNoteView } from "src/views/internal/AbstractNoteView";
 import invariant from "tiny-invariant";
+import { injectable } from "tsyringe";
 import type { CacheManager } from "./CacheManager";
 import type { ViewManager } from "./ViewManager";
 
@@ -25,6 +26,7 @@ type Context = {
 	getAllHotSandboxViews: ViewManager["getAllViews"];
 };
 
+@injectable()
 export class DatabaseManager implements IManager {
 	private debouncedSaveFns = new Map<
 		string,

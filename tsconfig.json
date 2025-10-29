@@ -11,6 +11,8 @@
 		"allowImportingTsExtensions": true,
 		"downlevelIteration": true,
 		"resolveJsonModule": true,
+		"experimentalDecorators": true,
+		"emitDecoratorMetadata": true,
 		"paths": {
 			"src/*": [
 				"src/*"

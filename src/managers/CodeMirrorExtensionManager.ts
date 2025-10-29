@@ -8,9 +8,10 @@ import { VIEW_TYPE_HOT_SANDBOX } from "src/utils/constants";
 import { HotSandboxNoteView } from "src/views/HotSandboxNoteView";
 import { AbstractNoteView } from "src/views/internal/AbstractNoteView";
 import {
-	SyncEditorPlugin,
-	syncEditorPlugin,
+    SyncEditorPlugin,
+    syncEditorPlugin,
 } from "src/views/internal/SyncEditorPlugin";
+import { injectable } from "tsyringe";
 import type { IManager } from "./IManager";
 
 type Context = {
@@ -19,6 +20,7 @@ type Context = {
 };
 
 /** Manages editor extensions and plugin connections */
+@injectable()
 export class CodeMirrorExtensionManager implements IManager {
 	constructor(private context: Context) {}
 
